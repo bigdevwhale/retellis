@@ -1,0 +1,49 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build outputs
+.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+
+# env / secrets — NEVER commit real keys
+.env
+.env.*
+!.env.example
+
+# logs & runtime data
+*.log
+deploy/data/
+deploy/logs/
+langfuse-data/
+.runtime/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# tools / generated
+graphify-out/
+.claude/settings.local.json
+
+# test / eval artifacts
+packages/eval/results/*
+!packages/eval/results/baseline.json
+coverage/
+.coverage

@@ -1,0 +1,32 @@
+{
+  "name": "ai-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Stillside — open-source AI companion PWA with BYOK swappable LLM keys.",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "start": "pnpm --filter @ai-companion/web start",
+    "test": "pnpm -r test",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "typecheck": "pnpm -r typecheck",
+    "contracts:gen": "pnpm --filter @ai-companion/contracts gen",
+    "contracts:check": "pnpm --filter @ai-companion/contracts check",
+    "contracts:check:ci": "pnpm --filter @ai-companion/contracts check:ci",
+    "eval": "pnpm --filter @ai-companion/eval eval",
+    "eval:check": "pnpm --filter @ai-companion/eval check",
+    "docker:up": "docker compose -f deploy/docker-compose.yml --project-directory . up",
+    "docker:down": "docker compose -f deploy/docker-compose.yml --project-directory . down"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

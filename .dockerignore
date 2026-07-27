@@ -1,0 +1,63 @@
+# Keep the build context lean — the compose build context is the repo root,
+# so exclude everything the Docker images don't need (deps, build outputs,
+# caches, venvs, VCS, env files). Dockerfiles COPY only what they declare.
+
+# VCS
+.git/
+.gitignore
+
+# dependencies (installed inside the image)
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+# build outputs (built inside the image)
+.next/
+out/
+dist/
+build/
+**/.next/
+**/dist/
+*.tsbuildinfo
+
+# python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+**/.pytest_cache/
+*.egg-info/
+**/*.egg-info/
+
+# env / secrets — never bake keys into an image
+.env
+.env.*
+!.env.example
+
+# logs & runtime data
+*.log
+deploy/data/
+deploy/logs/
+langfuse-data/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# test / eval artifacts
+packages/eval/results/*
+!packages/eval/results/baseline.json
+coverage/
+.coverage
+
+# docs / reference not needed at runtime
+docs/
+DESIGN.md
+README.md

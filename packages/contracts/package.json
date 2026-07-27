@@ -1,0 +1,20 @@
+{
+  "name": "@ai-companion/contracts",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/ts/index.ts"
+  },
+  "scripts": {
+    "gen": "python scripts/gen_json_schema.py",
+    "check": "python scripts/gen_json_schema.py && node --experimental-strip-types scripts/check_drift.mjs",
+    "check:ci": "python scripts/gen_json_schema.py && node --experimental-strip-types scripts/check_drift.mjs --strict"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "zod-to-json-schema": "^3.23.5"
+  }
+}

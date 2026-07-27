@@ -1,0 +1,215 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: companion
+      POSTGRES_PASSWORD: companion
+      POSTGRES_DB: companion
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U companion -d companion"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  langfuse:
+    # Pin to Langfuse v2: v3 (:latest) requires ClickHouse + Redis + S3.
+    # v2 is Postgres-only, which keeps the local stack minimal. v2 stopped
+    # receiving security updates at end of Q1 2025 — fine for a local-only
+    # single-user dev observability surface; do not expose it publicly. To
+    # move to v3 add a clickhouse service + CLICKHOUSE_URL, REDIS_URL, S3 creds.
+    image: langfuse/langfuse:2
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://companion:companion@postgres:5432/langfuse
+      NEXTAUTH_URL: http://localhost:3001
+      # Real random secrets (dev-only local stack). v2's env validator rejects
+      # weak/placeholder values; rotate for any non-local use. ENCRYPTION_KEY is
+      # 32 bytes hex (64 chars) — v2 encrypts API keys/prompts with it.
+      NEXTAUTH_SECRET: 53a806e3299027c65aa275519e9ebff94525f78f65d0f4ea58550d34ce2cc6dc
+      SALT: 2613921ab8e93193c8e3fb2d71c5dbfde17c5586cd843034bbd51727c6e62727
+      ENCRYPTION_KEY: 799d8dd88a33ac4d3b93c9418af7cc3d4edb24fd5af42d90c4d120ab1a0679ae
+      # v2's env schema validates these (Zod enum / presence); the image does not
+      # set NEXT_PUBLIC_NODE_ENV itself, so set both explicitly.
+      NODE_ENV: production
+      NEXT_PUBLIC_NODE_ENV: production
+      PORT: "3001"
+      LANGFUSE_LOG_LEVEL: info
+    ports:
+      - "3001:3001"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:3001/api/public/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Persist the auto-generated family-invite signing key across restarts.
+    # Without this volume, every container restart regenerates the secret
+    # and invalidates every outstanding invite. The file is 0600; the
+    # directory is 0700. Override AUTH_INVITE_SECRET in env to use your own.
+    volumes:
+      - companion_data:/var/lib/companion
+    environment:
+      DATABASE_URL: postgresql+asyncpg://companion:companion@postgres:5432/companion
+      LITELLM_API_KEY_OPENAI: ${LITELLM_API_KEY_OPENAI:-}
+      LITELLM_API_KEY_ANTHROPIC: ${LITELLM_API_KEY_ANTHROPIC:-}
+      LITELLM_API_KEY_OPENROUTER: ${LITELLM_API_KEY_OPENROUTER:-}
+      LITELLM_API_KEY_GOOGLE: ${LITELLM_API_KEY_GOOGLE:-}
+      LITELLM_API_KEY_AZURE: ${LITELLM_API_KEY_AZURE:-}
+      AZURE_API_BASE: ${AZURE_API_BASE:-}
+      AZURE_API_VERSION: ${AZURE_API_VERSION:-}
+      LITELLM_API_KEY_AIHUBMIX: ${LITELLM_API_KEY_AIHUBMIX:-}
+      LITELLM_API_KEY_BEDROCK: ${LITELLM_API_KEY_BEDROCK:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION_NAME: ${AWS_REGION_NAME:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      # The langfuse container listens on PORT=3001 (see the langfuse service
+      # below), NOT 3000. Using :3000 here silently breaks observability — the
+      # API's Langfuse client can't reach the server and spans are dropped.
+      LANGFUSE_HOST: http://langfuse:3001
+      LANGFUSE_PUBLIC_URL: ${LANGFUSE_PUBLIC_URL:-http://localhost:3001}
+      MONTHLY_BUDGET_USD: ${MONTHLY_BUDGET_USD:-20}
+      # Ollama last-resort fallback (no key). Empty → Ollama stays on standby
+      # and the mock stand-in is the final fallback node. Set to a reachable
+      # Ollama endpoint (e.g. http://host.docker.internal:11434) to activate it.
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
+      # Embeddings: hash (default, zero-config) | semantic (batched litellm
+      # embeddings at recall time; falls back to hash on any failure).
+      EMBEDDINGS_MODE: ${EMBEDDINGS_MODE:-hash}
+      # Messenger (Telegram) envelope key. Persistent NaCl SecretBox key used
+      # to encrypt bot tokens AND BYOK provider keys at rest. When empty the
+      # API uses an EPHEMERAL key per process — every restart invalidates
+      # connected bots + stored BYOK keys (re-bind + re-add-key required).
+      MESSENGER_TOKEN_DEK: ${MESSENGER_TOKEN_DEK:-}
+      EMBEDDINGS_MODEL: ${EMBEDDINGS_MODEL:-text-embedding-3-small}
+      EMBEDDINGS_API_KEY: ${EMBEDDINGS_API_KEY:-}
+      # Use the Postgres event store in compose; the app falls back to an
+      # in-memory store if the DB is unreachable (zero-config safe).
+      COMPANION_USE_DB: "1"
+      # --- Auth & deployment mode (see deploy/.env.example) ---
+      # Default: self-hosted with local accounts — zero external dependencies,
+      # boots with no extra config. Switch AUTH_BACKEND + DEPLOYMENT_MODE to use
+      # OIDC / magic-link / trusted-header / hosted; the API validates the
+      # mode→backend matrix at boot and refuses to start on a forbidden combo.
+      DEPLOYMENT_MODE: ${DEPLOYMENT_MODE:-self_hosted}
+      AUTH_SELF_HOSTED_PROFILE: ${AUTH_SELF_HOSTED_PROFILE:-local}
+      AUTH_BACKEND: ${AUTH_BACKEND:-local}
+      # The single origin users hit (Caddy in compose). Cookies are marked
+      # Secure only when this is an https URL; http://localhost is correct for
+      # the local stack. For a real domain set PUBLIC_ORIGIN=https://that.domain.
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost}
+      AUTH_SESSION_COOKIE: ${AUTH_SESSION_COOKIE:-stillside_sess}
+      # NEVER enable in production. Dev/test escape hatch that trusts X-User-Id.
+      AUTH_ALLOW_INSECURE_USER_HEADER: ${AUTH_ALLOW_INSECURE_USER_HEADER:-0}
+      # OIDC / SSO (required when AUTH_BACKEND=oidc)
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+      OIDC_SCOPES: ${OIDC_SCOPES:-openid email profile}
+      OIDC_DISPLAY_NAME: ${OIDC_DISPLAY_NAME:-SSO}
+      AUTH_STATE_SECRET: ${AUTH_STATE_SECRET:-}
+      # Magic link (required when AUTH_BACKEND=magic_link)
+      AUTH_MAGIC_LINK_SECRET: ${AUTH_MAGIC_LINK_SECRET:-}
+      AUTH_EMAIL_TRANSPORT: ${AUTH_EMAIL_TRANSPORT:-console}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Trusted-header / forward-auth (required when AUTH_BACKEND=trusted_header)
+      AUTH_TRUSTED_HEADER_NAME: ${AUTH_TRUSTED_HEADER_NAME:-X-Remote-User}
+      AUTH_TRUSTED_HEADER_SIG_NAME: ${AUTH_TRUSTED_HEADER_SIG_NAME:-X-Remote-User-Sig}
+      AUTH_HEADER_HMAC_SECRET: ${AUTH_HEADER_HMAC_SECRET:-}
+      AUTH_TRUSTED_REQUIRE_INTERNAL: ${AUTH_TRUSTED_REQUIRE_INTERNAL:-1}
+      # Hosted / billing (only meaningful when DEPLOYMENT_MODE=hosted)
+      HOSTED_SIGNUP_CREDITS_USD: ${HOSTED_SIGNUP_CREDITS_USD:-0}
+      FEATURE_BILLING: ${FEATURE_BILLING:-0}
+      FEATURE_CREDITS: ${FEATURE_CREDITS:-0}
+      FEATURE_HOSTED_FALLBACK: ${FEATURE_HOSTED_FALLBACK:-0}
+      FEATURE_MAGIC_LINKS: ${FEATURE_MAGIC_LINKS:-0}
+      # Billing providers (FEATURE_BILLING=1). Routed by billing_country, not
+      # IP: Paddle for WW, ЮKassa for RU. Bootstrap hard-fails if hosted+billing
+      # but neither is configured. Secrets env-only. Webhooks are first-party
+      # via Caddy (/v1/billing/webhook/{paddle,yookassa}).
+      PADDLE_API_KEY: ${PADDLE_API_KEY:-}
+      PADDLE_WEBHOOK_SECRET: ${PADDLE_WEBHOOK_SECRET:-}
+      PADDLE_ENVIRONMENT: ${PADDLE_ENVIRONMENT:-sandbox}
+      YUKASSA_SHOP_ID: ${YUKASSA_SHOP_ID:-}
+      YUKASSA_SECRET_KEY: ${YUKASSA_SECRET_KEY:-}
+    # Exposed for direct dev/debug only. The supported entry is Caddy on :80
+    # (same-origin cookies). Don't point a browser at :8000 in production —
+    # that bypasses the SameSite=Lax first-party cookie model.
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:8000/v1/health || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      # NEXT_PUBLIC_* is baked at build time; Dockerfile.web leaves it unset so
+      # the client uses same-origin /v1. Do NOT set it to a cross-origin URL —
+      # that would break the session-cookie model.
+      NODE_ENV: production
+      NEXT_PUBLIC_SESSION_COOKIE: ${AUTH_SESSION_COOKIE:-stillside_sess}
+      # Note: the /v1 → api:8000 proxy is baked into the image at build time
+      # (Dockerfile.web sets API_PROXY_TARGET) because Next.js evaluates
+      # `rewrites()` at build, not runtime. Caddy is still the recommended
+      # entry for TLS; when Caddy is in front it routes /v1 itself.
+    # Exposed for direct dev/debug only; the supported entry is Caddy on :80.
+    ports:
+      - "3000:3000"
+
+  caddy:
+    # Single-origin reverse proxy: TLS + /v1 → api, / → web. This is what makes
+    # the SameSite=Lax session cookie first-party and closes the old HTTP-only
+    # gap. CADDY_SITE=:80 for local (HTTP); set a real domain for auto-HTTPS.
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_started
+    environment:
+      CADDY_SITE: ${CADDY_SITE:-:80}
+    ports:
+      - "${CADDY_HTTP_PORT:-80}:80"
+      - "${CADDY_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
+  companion_data:

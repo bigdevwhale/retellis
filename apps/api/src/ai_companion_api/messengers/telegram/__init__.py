@@ -1,0 +1,1 @@
+"""Telegram Bot API adapter (long-polling, Bot API only — no MTProto)."""

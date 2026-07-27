@@ -1,0 +1,32 @@
+[project]
+name = "ai-companion-eval"
+version = "0.1.0"
+description = "Empathy eval gate — memory-on must not degrade empathy vs memory-off, and must improve recall."
+license = "Apache-2.0"
+requires-python = ">=3.12"
+dependencies = ["pydantic>=2.10.4", "httpx>=0.28.1", "ai-companion-contracts"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3.4", "ruff>=0.8.4"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# gate.py / memory_probe.py insert apps/api/src + contracts onto sys.path
+# before importing the API memory layer, so their top-of-file imports are
+# intentionally not first.
+"src/ai_companion_eval/gate.py" = ["E402", "I001"]
+"src/ai_companion_eval/memory_probe.py" = ["E402", "I001"]

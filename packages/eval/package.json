@@ -1,0 +1,10 @@
+{
+  "name": "@ai-companion/eval",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "eval": "python -m ai_companion_eval.gate && python -m ai_companion_eval.family_gate",
+    "check": "python -m ai_companion_eval.gate --check"
+  }
+}

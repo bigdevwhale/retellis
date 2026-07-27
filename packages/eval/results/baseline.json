@@ -1,0 +1,13 @@
+{
+  "n_tasks": 24,
+  "empathy_off": 0.9,
+  "empathy_on": 0.9,
+  "recall_off": 0.0,
+  "recall_on": 1.0,
+  "gate_pass": true,
+  "memory_probes": {
+    "passed": 7,
+    "total": 7
+  },
+  "note": "heuristic judge (zero-config) over the mock adapter; set ANTHROPIC_API_KEY to rerun with the Claude-Haiku-4.5 judge."
+}

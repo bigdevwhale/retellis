@@ -1,0 +1,71 @@
+name: CI
+
+# I22: the gate that keeps the polyglot monorepo honest. Runs the TS side
+# (typecheck, biome lint, web vitest), the Python side (ruff, pytest, the
+# empathy eval), and the cross-language contract drift check in STRICT mode
+# (a missing schema.json / zod-to-json-schema fails the build instead of
+# silently passing). The contracts drift check straddles both runtimes
+# (pydantic generates schema.json, zod-to-json-schema converts the TS side),
+# so it lives in a job that has both Node and Python installed.
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: pnpm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Node deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Python deps
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install -e packages/contracts
+          .venv/bin/python -m pip install -e 'apps/api[dev]'
+          .venv/bin/python -m pip install -e packages/eval
+
+      - name: TypeScript typecheck
+        run: pnpm typecheck
+
+      - name: Biome lint
+        run: pnpm lint
+
+      - name: Web tests (vitest)
+        run: pnpm --filter @ai-companion/web exec vitest run
+
+      - name: Contract drift check (strict)
+        run: pnpm contracts:check:ci
+
+      - name: Ruff (Python)
+        run: .venv/bin/python -m ruff check apps/api packages/contracts packages/eval
+
+      - name: API tests (pytest)
+        run: .venv/bin/python -m pytest -q
+        working-directory: apps/api
+
+      - name: Empathy eval gate
+        run: |
+          .venv/bin/python -m ai_companion_eval.gate
+          .venv/bin/python -m ai_companion_eval.family_gate

@@ -1,0 +1,2870 @@
+{
+  "$defs": {
+    "AuthConfig": {
+      "$defs": {
+        "AuthBackendKind": {
+          "enum": [
+            "local",
+            "oidc",
+            "magic_link",
+            "trusted_header"
+          ],
+          "title": "AuthBackendKind",
+          "type": "string"
+        },
+        "DeploymentMode": {
+          "enum": [
+            "self_hosted",
+            "hosted"
+          ],
+          "title": "DeploymentMode",
+          "type": "string"
+        },
+        "FeatureFlags": {
+          "properties": {
+            "billing": {
+              "default": false,
+              "title": "Billing",
+              "type": "boolean"
+            },
+            "credits": {
+              "default": false,
+              "title": "Credits",
+              "type": "boolean"
+            },
+            "hosted_fallback": {
+              "default": false,
+              "title": "Hosted Fallback",
+              "type": "boolean"
+            },
+            "journal": {
+              "default": true,
+              "title": "Journal",
+              "type": "boolean"
+            },
+            "magic_links": {
+              "default": false,
+              "title": "Magic Links",
+              "type": "boolean"
+            },
+            "shares": {
+              "default": true,
+              "title": "Shares",
+              "type": "boolean"
+            }
+          },
+          "title": "FeatureFlags",
+          "type": "object"
+        },
+        "SelfHostedProfile": {
+          "enum": [
+            "local",
+            "sso"
+          ],
+          "title": "SelfHostedProfile",
+          "type": "string"
+        }
+      },
+      "description": "The public deployment descriptor returned by ``GET /v1/config``. Drives the\nlogin screen, onboarding steps, and nav. No secrets, no per-user data.",
+      "properties": {
+        "auth_backends": {
+          "items": {
+            "$ref": "#/$defs/AuthBackendKind"
+          },
+          "title": "Auth Backends",
+          "type": "array"
+        },
+        "features": {
+          "$ref": "#/$defs/FeatureFlags"
+        },
+        "mode": {
+          "$ref": "#/$defs/DeploymentMode",
+          "default": "self_hosted"
+        },
+        "profile": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SelfHostedProfile"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "AuthConfig",
+      "type": "object"
+    },
+    "BillingWebhookAck": {
+      "description": "Minimal ack returned to the provider. Providers expect a 200 with a body\nthey tolerate; keep it bare.",
+      "properties": {
+        "ok": {
+          "default": true,
+          "title": "Ok",
+          "type": "boolean"
+        }
+      },
+      "title": "BillingWebhookAck",
+      "type": "object"
+    },
+    "CheckoutRequest": {
+      "description": "Body for ``POST /v1/billing/checkout``. ``billing_country`` selects the\nprovider: ``RU`` \u2192 \u042eKassa, otherwise Paddle. Manual override of the\naccount-derived country \u2014 not IP-derived (IP is unreliable behind VPN).",
+      "properties": {
+        "billing_country": {
+          "title": "Billing Country",
+          "type": "string"
+        },
+        "plan_slug": {
+          "title": "Plan Slug",
+          "type": "string"
+        }
+      },
+      "required": [
+        "plan_slug",
+        "billing_country"
+      ],
+      "title": "CheckoutRequest",
+      "type": "object"
+    },
+    "CheckoutSession": {
+      "$defs": {
+        "BillingProvider": {
+          "enum": [
+            "paddle",
+            "yookassa",
+            "prodamus"
+          ],
+          "title": "BillingProvider",
+          "type": "string"
+        }
+      },
+      "description": "The hosted-checkout redirect. The browser leaves the app to the\nprovider's domain; no card data is collected on our side. The plan+country\nare echoed server-side as passthrough metadata so the webhook can link the\npayment back to the user without trusting the redirect.",
+      "properties": {
+        "provider": {
+          "$ref": "#/$defs/BillingProvider"
+        },
+        "provider_sub_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Sub Id"
+        },
+        "redirect_url": {
+          "title": "Redirect Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "redirect_url",
+        "provider"
+      ],
+      "title": "CheckoutSession",
+      "type": "object"
+    },
+    "ConversationSummary": {
+      "description": "A conversation-list projection aggregated from the event chain.\n\nK6: the UI drawer needs a first-class list of conversations (convo_id,\ntitle, last activity) that survives refresh. The store derives this from\n``events`` (grouped by ``convo_id``) \u2014 there is no ``conversations`` table.\n``title`` is the first user-role message truncated; ``preview`` is the\nlast event content truncated; ``last_activity`` is the MAX(``created_at``)\nof the convo's events. Fields mirror ``Event`` family-scope columns so a\nconversation can be re-scoped into a family session later.",
+      "properties": {
+        "convo_id": {
+          "title": "Convo Id",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "event_count": {
+          "minimum": 0,
+          "title": "Event Count",
+          "type": "integer"
+        },
+        "family_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Id"
+        },
+        "last_activity": {
+          "format": "date-time",
+          "title": "Last Activity",
+          "type": "string"
+        },
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "preview": {
+          "title": "Preview",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "visibility": {
+          "default": "private",
+          "enum": [
+            "private",
+            "shared"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "convo_id",
+        "persona_id",
+        "title",
+        "preview",
+        "event_count",
+        "created_at",
+        "last_activity"
+      ],
+      "title": "ConversationSummary",
+      "type": "object"
+    },
+    "DoneEvent": {
+      "properties": {
+        "type": {
+          "const": "done",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "title": "DoneEvent",
+      "type": "object"
+    },
+    "ErrorEvent": {
+      "properties": {
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "const": "error",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "message"
+      ],
+      "title": "ErrorEvent",
+      "type": "object"
+    },
+    "Event": {
+      "$defs": {
+        "EventRole": {
+          "enum": [
+            "user",
+            "assistant",
+            "system"
+          ],
+          "title": "EventRole",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "created_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Created At"
+        },
+        "emotion_tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Emotion Tags",
+          "type": "array"
+        },
+        "emotional_intensity": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Emotional Intensity",
+          "type": "number"
+        },
+        "family_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Id"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "participant_user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant User Id"
+        },
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "prev_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Prev Event Id"
+        },
+        "role": {
+          "$ref": "#/$defs/EventRole"
+        },
+        "salience": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Salience",
+          "type": "number"
+        },
+        "short_term_salience": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Short Term Salience",
+          "type": "number"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        },
+        "visibility": {
+          "default": "private",
+          "enum": [
+            "private",
+            "shared"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "persona_id",
+        "role",
+        "content"
+      ],
+      "title": "Event",
+      "type": "object"
+    },
+    "EventChain": {
+      "$defs": {
+        "Event": {
+          "properties": {
+            "content": {
+              "title": "Content",
+              "type": "string"
+            },
+            "created_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Created At"
+            },
+            "emotion_tags": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Emotion Tags",
+              "type": "array"
+            },
+            "emotional_intensity": {
+              "default": 0.0,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Emotional Intensity",
+              "type": "number"
+            },
+            "family_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Family Id"
+            },
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "participant_user_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Participant User Id"
+            },
+            "persona_id": {
+              "title": "Persona Id",
+              "type": "string"
+            },
+            "prev_event_id": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Prev Event Id"
+            },
+            "role": {
+              "$ref": "#/$defs/EventRole"
+            },
+            "salience": {
+              "default": 0.0,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Salience",
+              "type": "number"
+            },
+            "short_term_salience": {
+              "default": 0.0,
+              "maximum": 1,
+              "minimum": 0,
+              "title": "Short Term Salience",
+              "type": "number"
+            },
+            "user_id": {
+              "title": "User Id",
+              "type": "string"
+            },
+            "visibility": {
+              "default": "private",
+              "enum": [
+                "private",
+                "shared"
+              ],
+              "title": "Visibility",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "user_id",
+            "persona_id",
+            "role",
+            "content"
+          ],
+          "title": "Event",
+          "type": "object"
+        },
+        "EventRole": {
+          "enum": [
+            "user",
+            "assistant",
+            "system"
+          ],
+          "title": "EventRole",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "events": {
+          "items": {
+            "$ref": "#/$defs/Event"
+          },
+          "title": "Events",
+          "type": "array"
+        },
+        "salience_sum": {
+          "title": "Salience Sum",
+          "type": "number"
+        }
+      },
+      "required": [
+        "events",
+        "salience_sum"
+      ],
+      "title": "EventChain",
+      "type": "object"
+    },
+    "FallbackEvent": {
+      "properties": {
+        "from_kind": {
+          "title": "From Kind",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "to_kind": {
+          "title": "To Kind",
+          "type": "string"
+        },
+        "type": {
+          "const": "fallback",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "from_kind",
+        "to_kind",
+        "reason"
+      ],
+      "title": "FallbackEvent",
+      "type": "object"
+    },
+    "Family": {
+      "description": "A family of up to 4 real user accounts that share a family therapist\npersona + family-scoped memory + a family BYOK key (owner's key, served to\nall members via the family vault). The owner is a regular user account; the\nfamily vault is a SEPARATE vault from the owner's personal vault, unlocked\nby a SEPARATE family passphrase that the owner shares with members\nout-of-band. The server cannot decrypt the family key \u2014 same zero-knowledge\ncontract as the personal vault.",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "family_enc_blob_seed": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Enc Blob Seed"
+        },
+        "family_salt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Salt"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "owner_user_id": {
+          "title": "Owner User Id",
+          "type": "string"
+        },
+        "use_owner_personal_key": {
+          "default": false,
+          "title": "Use Owner Personal Key",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "owner_user_id",
+        "created_at"
+      ],
+      "title": "Family",
+      "type": "object"
+    },
+    "FamilyInvite": {
+      "$defs": {
+        "FamilyRole": {
+          "enum": [
+            "owner",
+            "member"
+          ],
+          "title": "FamilyRole",
+          "type": "string"
+        }
+      },
+      "description": "A pending invitation to join a family. The token is NEVER in the wire\nshape \u2014 it lives only in the email link (sealed; see magic-link pattern).",
+      "properties": {
+        "accepted_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Accepted At"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "email": {
+          "title": "Email",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "family_id": {
+          "title": "Family Id",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "invited_by": {
+          "title": "Invited By",
+          "type": "string"
+        },
+        "role": {
+          "$ref": "#/$defs/FamilyRole"
+        }
+      },
+      "required": [
+        "id",
+        "family_id",
+        "email",
+        "role",
+        "expires_at",
+        "created_at",
+        "invited_by"
+      ],
+      "title": "FamilyInvite",
+      "type": "object"
+    },
+    "FamilyMember": {
+      "$defs": {
+        "FamilyRole": {
+          "enum": [
+            "owner",
+            "member"
+          ],
+          "title": "FamilyRole",
+          "type": "string"
+        }
+      },
+      "description": "A user's membership in a family. ``family_display_name`` + ``relation``\nare what the therapist sees in the prompt (e.g. \"Alex (parent)\"). Defaults\nfrom ``users.display_name``; editable by the owner.",
+      "properties": {
+        "color": {
+          "title": "Color",
+          "type": "string"
+        },
+        "family_display_name": {
+          "title": "Family Display Name",
+          "type": "string"
+        },
+        "family_id": {
+          "title": "Family Id",
+          "type": "string"
+        },
+        "family_role": {
+          "$ref": "#/$defs/FamilyRole"
+        },
+        "joined_at": {
+          "format": "date-time",
+          "title": "Joined At",
+          "type": "string"
+        },
+        "relation": {
+          "title": "Relation",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "family_id",
+        "user_id",
+        "family_role",
+        "family_display_name",
+        "relation",
+        "color",
+        "joined_at"
+      ],
+      "title": "FamilyMember",
+      "type": "object"
+    },
+    "FamilyProvider": {
+      "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        }
+      },
+      "description": "Family-scoped provider (the family owner's API key, shared with all\nmembers). Same shape as ``Provider`` but partitioned by ``family_id``. The\n``enc_blob`` is encrypted to the family passphrase (separate from the\npersonal passphrase). Server cannot decrypt it.",
+      "properties": {
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "embeddings_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Embeddings Model"
+        },
+        "enc_blob": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enc Blob"
+        },
+        "family_id": {
+          "title": "Family Id",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "key_handle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Handle"
+        },
+        "kind": {
+          "$ref": "#/$defs/ProviderKind"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        }
+      },
+      "required": [
+        "id",
+        "family_id",
+        "kind",
+        "label",
+        "created_at"
+      ],
+      "title": "FamilyProvider",
+      "type": "object"
+    },
+    "FamilyTherapistPrompt": {
+      "description": "Owner-customisable system prompt for the ``fam`` persona, persisted on\nthe family row. Read by every member (so they can see what their therapist\nis being told); written by the owner only.\n\n``body`` is the composed prompt the owner has authored (session focus +\nfamily rules + family context + approach, with the unconditional\n\"disclose, don't perform\" footer appended client-side). ``None`` means\nthe family has not customised the prompt \u2014 readers fall back to the\nstatic ``fam`` builtin in their own registry, so the server never has to\nre-ship the long builtin over the wire.\n\n``set_by_display_name`` is the owner-side display name resolved at read\ntime via the auth store so the client can render \"Set by <name> \u00b7 <date>\"\nwithout a second round-trip. It's a denormalised cache, not authoritative;\nthe real author is ``set_by_user_id``.",
+      "properties": {
+        "body": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        },
+        "set_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Set At"
+        },
+        "set_by_display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Set By Display Name"
+        },
+        "set_by_user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Set By User Id"
+        }
+      },
+      "title": "FamilyTherapistPrompt",
+      "type": "object"
+    },
+    "FamilyTherapistPromptSet": {
+      "description": "Write body for ``PUT /v1/family/therapist-prompt``. ``None`` clears the\ncustomisation (resets to the static ``fam`` builtin). An empty string is a\n400 \u2014 the contract is \"set a real prompt or pass null to clear\".",
+      "properties": {
+        "body": {
+          "anyOf": [
+            {
+              "maxLength": 8000,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body"
+        }
+      },
+      "title": "FamilyTherapistPromptSet",
+      "type": "object"
+    },
+    "FeatureFlags": {
+      "properties": {
+        "billing": {
+          "default": false,
+          "title": "Billing",
+          "type": "boolean"
+        },
+        "credits": {
+          "default": false,
+          "title": "Credits",
+          "type": "boolean"
+        },
+        "hosted_fallback": {
+          "default": false,
+          "title": "Hosted Fallback",
+          "type": "boolean"
+        },
+        "journal": {
+          "default": true,
+          "title": "Journal",
+          "type": "boolean"
+        },
+        "magic_links": {
+          "default": false,
+          "title": "Magic Links",
+          "type": "boolean"
+        },
+        "shares": {
+          "default": true,
+          "title": "Shares",
+          "type": "boolean"
+        }
+      },
+      "title": "FeatureFlags",
+      "type": "object"
+    },
+    "JournalEntry": {
+      "description": "A user-authored diary entry \u2014 the display unit of the /journal page.\n\nSeparate from the chat event chain: entries are written directly by the\nuser (or seeded from a chat message via \"Save to journal\", which copies the\nmessage text into a new row and links the source convo/event). The journal\nsurfaces ``mood`` and ``tags`` AS AUTHORED \u2014 by the user, not generated \u2014\nso it never makes affective claims the user didn't make themselves\n(\"disclose, don't perform\"). ``salience`` is the user's \"matters to me\"\nchoice, not an LLM-judged score.\n\n``persona_id`` is the companion this entry relates to (Lou by default for\njournaling) \u2014 opaque partition key, same as ``Event.persona_id``.",
+      "properties": {
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "family_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Id"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "mood": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mood"
+        },
+        "participant_user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant User Id"
+        },
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "salience": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Salience",
+          "type": "number"
+        },
+        "source_convo_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Convo Id"
+        },
+        "source_event_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Event Id"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        },
+        "visibility": {
+          "default": "private",
+          "enum": [
+            "private",
+            "shared"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "persona_id",
+        "body",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "JournalEntry",
+      "type": "object"
+    },
+    "JournalTagListResponse": {
+      "description": "Distinct tags the user has authored across their journal entries, scoped\nto the same filters as ``GET /v1/journal`` (minus ``tag``/``q``/pagination \u2014\nthe cloud is an aggregate, not a list of entries). Sorted lexicographically\nfor a stable UI. Wrapped in an object so we can add fields (``counts``,\n``moods``) without a contract break.\n\nUsed by the /journal sidebar to keep the tag cloud stable across tag-filter\nchanges \u2014 the cloud aggregates from the whole scope, not the filtered list\nof entries currently on screen.",
+      "properties": {
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        }
+      },
+      "title": "JournalTagListResponse",
+      "type": "object"
+    },
+    "LlmStreamRequest": {
+      "$defs": {
+        "Tone": {
+          "properties": {
+            "direct": {
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Direct",
+              "type": "number"
+            },
+            "pace": {
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Pace",
+              "type": "number"
+            },
+            "warmth": {
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Warmth",
+              "type": "number"
+            }
+          },
+          "required": [
+            "warmth",
+            "direct",
+            "pace"
+          ],
+          "title": "Tone",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "convo_id": {
+          "title": "Convo Id",
+          "type": "string"
+        },
+        "embeddings_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Embeddings Model"
+        },
+        "enc_key_blob": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enc Key Blob"
+        },
+        "family_enc_key_blob": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Enc Key Blob"
+        },
+        "family_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Id"
+        },
+        "family_key_handle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Key Handle"
+        },
+        "key_handle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Handle"
+        },
+        "memory_on": {
+          "default": true,
+          "title": "Memory On",
+          "type": "boolean"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "participant_user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant User Id"
+        },
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "persona_prompt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Persona Prompt"
+        },
+        "persona_tone": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Tone"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "provider_base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Base Url"
+        },
+        "request_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Request Id"
+        },
+        "visibility": {
+          "anyOf": [
+            {
+              "enum": [
+                "private",
+                "shared"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Visibility"
+        }
+      },
+      "required": [
+        "persona_id",
+        "convo_id",
+        "message"
+      ],
+      "title": "LlmStreamRequest",
+      "type": "object"
+    },
+    "LocalLoginRequest": {
+      "properties": {
+        "email": {
+          "title": "Email",
+          "type": "string"
+        },
+        "password": {
+          "title": "Password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ],
+      "title": "LocalLoginRequest",
+      "type": "object"
+    },
+    "LocalSignupRequest": {
+      "properties": {
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "email": {
+          "title": "Email",
+          "type": "string"
+        },
+        "password": {
+          "title": "Password",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email",
+        "password"
+      ],
+      "title": "LocalSignupRequest",
+      "type": "object"
+    },
+    "MagicLinkRequest": {
+      "properties": {
+        "email": {
+          "title": "Email",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email"
+      ],
+      "title": "MagicLinkRequest",
+      "type": "object"
+    },
+    "Memory": {
+      "$defs": {
+        "MemoryStatus": {
+          "enum": [
+            "active",
+            "superseded"
+          ],
+          "title": "MemoryStatus",
+          "type": "string"
+        }
+      },
+      "description": "An atomic, LLM-derived fact/observation the companion has extracted from\nthe event chain \u2014 the display unit of the /memory page (replaces showing raw\nchat messages). One memory = one citable thing the companion knows about the\nuser, with corpus-derived theme tags, a salience weight, and provenance\n(the event ids it was drawn from \u2192 \"drawn from N turns\").\n\nThe event chain stays the recall substrate; memories are a synthesized view\non top of it. Memories are mutable: extraction can update an existing memory\n(new tags, refined content) or supersede it (a newer memory replaces it).",
+      "properties": {
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "family_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Id"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "participant_user_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participant User Id"
+        },
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "salience": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Salience",
+          "type": "number"
+        },
+        "source_event_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Event Ids",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/MemoryStatus",
+          "default": "active"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        },
+        "visibility": {
+          "default": "private",
+          "enum": [
+            "private",
+            "shared"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "persona_id",
+        "content",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "Memory",
+      "type": "object"
+    },
+    "MemoryShare": {
+      "description": "A live link that lets one persona's memories be recalled by another\npersona \u2014 a *reference*, not a copy. The donor's memories stay owned by the\ndonor (and mutated only by the donor's own turns); the receiver's read paths\nunion the donor's active memories + event chains for as long as the link\nexists. Remove the row to revoke; nothing is duplicated or deleted.\n\nDonor-initiated: ``donor_persona_id`` shares INTO ``receiver_persona_id``.\nBoth ids are opaque partition keys (builtins or ``custom-...``).",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "donor_persona_id": {
+          "title": "Donor Persona Id",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "receiver_persona_id": {
+          "title": "Receiver Persona Id",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "donor_persona_id",
+        "receiver_persona_id",
+        "created_at"
+      ],
+      "title": "MemoryShare",
+      "type": "object"
+    },
+    "Messenger": {
+      "$defs": {
+        "MessengerKind": {
+          "enum": [
+            "telegram"
+          ],
+          "title": "MessengerKind",
+          "type": "string"
+        },
+        "MessengerStatus": {
+          "enum": [
+            "pending_handshake",
+            "active",
+            "paused",
+            "error"
+          ],
+          "title": "MessengerStatus",
+          "type": "string"
+        }
+      },
+      "description": "A linked messenger bot. ``bot_token`` never appears here \u2014 only the\nmasked suffix for display. ``byok_bound`` tells the UI whether a BYOK key\nwas sealed during the handshake (false \u2192 server fallback keys).",
+      "properties": {
+        "bot_token_masked": {
+          "title": "Bot Token Masked",
+          "type": "string"
+        },
+        "bot_username": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bot Username"
+        },
+        "byok_bound": {
+          "default": false,
+          "title": "Byok Bound",
+          "type": "boolean"
+        },
+        "chat_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Chat Id"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/MessengerKind"
+        },
+        "last_error": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Error"
+        },
+        "last_seen_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Seen At"
+        },
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/MessengerStatus"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "kind",
+        "status",
+        "persona_id",
+        "bot_token_masked",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "Messenger",
+      "type": "object"
+    },
+    "MessengerPatchRequest": {
+      "$defs": {
+        "MessengerStatus": {
+          "enum": [
+            "pending_handshake",
+            "active",
+            "paused",
+            "error"
+          ],
+          "title": "MessengerStatus",
+          "type": "string"
+        }
+      },
+      "description": "PATCH semantics: omitted = keep, null = keep, present value = set.",
+      "properties": {
+        "persona_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Persona Id"
+        },
+        "status": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessengerStatus"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "MessengerPatchRequest",
+      "type": "object"
+    },
+    "Persona": {
+      "$defs": {
+        "Tone": {
+          "properties": {
+            "direct": {
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Direct",
+              "type": "number"
+            },
+            "pace": {
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Pace",
+              "type": "number"
+            },
+            "warmth": {
+              "maximum": 100,
+              "minimum": 0,
+              "title": "Warmth",
+              "type": "number"
+            }
+          },
+          "required": [
+            "warmth",
+            "direct",
+            "pace"
+          ],
+          "title": "Tone",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "custom": {
+          "default": false,
+          "title": "Custom",
+          "type": "boolean"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "opening_line": {
+          "title": "Opening Line",
+          "type": "string"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "system_prompt": {
+          "title": "System Prompt",
+          "type": "string"
+        },
+        "tone": {
+          "$ref": "#/$defs/Tone"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "name",
+        "role",
+        "system_prompt",
+        "tone",
+        "opening_line"
+      ],
+      "title": "Persona",
+      "type": "object"
+    },
+    "Plan": {
+      "$defs": {
+        "PlanGeo": {
+          "enum": [
+            "WW",
+            "RU"
+          ],
+          "title": "PlanGeo",
+          "type": "string"
+        },
+        "PlanInterval": {
+          "enum": [
+            "month",
+            "year"
+          ],
+          "title": "PlanInterval",
+          "type": "string"
+        }
+      },
+      "description": "A sellable subscription tier. Prices in minor units (cents/kopecks) \u2014\nnever float. ``credits_grant_usd`` is the USD-denominated balance refilled\non each successful payment (matches the existing ``credits_usd`` field);\nthe payment currency (``currency``) may differ (RUB for RU plans). The\ngrant is additive on renewal so an early renewal doesn't burn the user's\nremaining balance.",
+      "properties": {
+        "active": {
+          "default": true,
+          "title": "Active",
+          "type": "boolean"
+        },
+        "credits_grant_usd": {
+          "default": 0.0,
+          "minimum": 0,
+          "title": "Credits Grant Usd",
+          "type": "number"
+        },
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "geo": {
+          "$ref": "#/$defs/PlanGeo"
+        },
+        "interval": {
+          "$ref": "#/$defs/PlanInterval"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "price_cents": {
+          "minimum": 0,
+          "title": "Price Cents",
+          "type": "integer"
+        },
+        "provider_price_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Price Id"
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        },
+        "trial_days": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Trial Days",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "slug",
+        "name",
+        "price_cents",
+        "currency",
+        "interval",
+        "geo"
+      ],
+      "title": "Plan",
+      "type": "object"
+    },
+    "PortalSession": {
+      "description": "Self-service portal redirect (cancel, change card, invoices) \u2014 managed\nby the provider, not us. We never build our own cancel/card UI.",
+      "properties": {
+        "redirect_url": {
+          "title": "Redirect Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "redirect_url"
+      ],
+      "title": "PortalSession",
+      "type": "object"
+    },
+    "Principal": {
+      "description": "The verified identity attached to an authenticated request \u2014 the source of\nthe ``user_id`` partition key that scopes every store query. Distinct from the\nvault passphrase (which the server never sees). Surfaced by ``GET /v1/auth/me``.",
+      "properties": {
+        "auth_backend": {
+          "title": "Auth Backend",
+          "type": "string"
+        },
+        "credits_usd": {
+          "default": 0.0,
+          "title": "Credits Usd",
+          "type": "number"
+        },
+        "display_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Name"
+        },
+        "email": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Email"
+        },
+        "family_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Id"
+        },
+        "family_role": {
+          "anyOf": [
+            {
+              "enum": [
+                "owner",
+                "member"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Role"
+        },
+        "issuer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Issuer"
+        },
+        "plan": {
+          "default": "self_hosted_free",
+          "title": "Plan",
+          "type": "string"
+        },
+        "subject": {
+          "title": "Subject",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "subject",
+        "auth_backend"
+      ],
+      "title": "Principal",
+      "type": "object"
+    },
+    "Provider": {
+      "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "embeddings_model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Embeddings Model"
+        },
+        "enc_blob": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Enc Blob"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "key_handle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key Handle"
+        },
+        "kind": {
+          "$ref": "#/$defs/ProviderKind"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "kind",
+        "label"
+      ],
+      "title": "Provider",
+      "type": "object"
+    },
+    "ProviderSummary": {
+      "properties": {
+        "cost_usd": {
+          "title": "Cost Usd",
+          "type": "number"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "requests": {
+          "title": "Requests",
+          "type": "integer"
+        },
+        "status": {
+          "default": "standby",
+          "enum": [
+            "healthy",
+            "standby",
+            "unavailable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "tokens_in": {
+          "title": "Tokens In",
+          "type": "integer"
+        },
+        "tokens_out": {
+          "title": "Tokens Out",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "model",
+        "requests",
+        "cost_usd",
+        "tokens_in",
+        "tokens_out"
+      ],
+      "title": "ProviderSummary",
+      "type": "object"
+    },
+    "RoutingNode": {
+      "properties": {
+        "base_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Base Url"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "status": {
+          "default": "standby",
+          "enum": [
+            "healthy",
+            "standby",
+            "unavailable"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "model"
+      ],
+      "title": "RoutingNode",
+      "type": "object"
+    },
+    "RoutingState": {
+      "$defs": {
+        "ProviderSummary": {
+          "properties": {
+            "cost_usd": {
+              "title": "Cost Usd",
+              "type": "number"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "model": {
+              "title": "Model",
+              "type": "string"
+            },
+            "requests": {
+              "title": "Requests",
+              "type": "integer"
+            },
+            "status": {
+              "default": "standby",
+              "enum": [
+                "healthy",
+                "standby",
+                "unavailable"
+              ],
+              "title": "Status",
+              "type": "string"
+            },
+            "tokens_in": {
+              "title": "Tokens In",
+              "type": "integer"
+            },
+            "tokens_out": {
+              "title": "Tokens Out",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "kind",
+            "model",
+            "requests",
+            "cost_usd",
+            "tokens_in",
+            "tokens_out"
+          ],
+          "title": "ProviderSummary",
+          "type": "object"
+        },
+        "RoutingNode": {
+          "properties": {
+            "base_url": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Base Url"
+            },
+            "kind": {
+              "title": "Kind",
+              "type": "string"
+            },
+            "model": {
+              "title": "Model",
+              "type": "string"
+            },
+            "status": {
+              "default": "standby",
+              "enum": [
+                "healthy",
+                "standby",
+                "unavailable"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "model"
+          ],
+          "title": "RoutingNode",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "chain": {
+          "items": {
+            "$ref": "#/$defs/RoutingNode"
+          },
+          "title": "Chain",
+          "type": "array"
+        },
+        "fallback_last_turn": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback Last Turn"
+        },
+        "hard_stop": {
+          "default": false,
+          "title": "Hard Stop",
+          "type": "boolean"
+        },
+        "langfuse_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Langfuse Url"
+        },
+        "monthly_budget_usd": {
+          "title": "Monthly Budget Usd",
+          "type": "number"
+        },
+        "pct": {
+          "default": 0.0,
+          "title": "Pct",
+          "type": "number"
+        },
+        "per_provider": {
+          "items": {
+            "$ref": "#/$defs/ProviderSummary"
+          },
+          "title": "Per Provider",
+          "type": "array"
+        },
+        "remaining_usd": {
+          "title": "Remaining Usd",
+          "type": "number"
+        },
+        "spent_usd": {
+          "title": "Spent Usd",
+          "type": "number"
+        },
+        "warn": {
+          "default": false,
+          "title": "Warn",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "chain",
+        "monthly_budget_usd",
+        "spent_usd",
+        "remaining_usd"
+      ],
+      "title": "RoutingState",
+      "type": "object"
+    },
+    "SessionEvent": {
+      "properties": {
+        "convo_id": {
+          "title": "Convo Id",
+          "type": "string"
+        },
+        "persona_id": {
+          "title": "Persona Id",
+          "type": "string"
+        },
+        "type": {
+          "const": "session",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "convo_id",
+        "persona_id"
+      ],
+      "title": "SessionEvent",
+      "type": "object"
+    },
+    "SessionInfo": {
+      "description": "One of the user's active sessions, surfaced by ``GET /v1/auth/sessions``\nfor the \"active devices\" management card. The session ``token`` (the cookie\nvalue, a secret) is NEVER included \u2014 only the opaque surrogate ``id`` keys\nthe revoke endpoints. ``current`` marks the session whose token matches the\nrequest cookie (cannot be revoked from its own card).",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current": {
+          "default": false,
+          "title": "Current",
+          "type": "boolean"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "user_agent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "User Agent"
+        }
+      },
+      "required": [
+        "id",
+        "created_at",
+        "expires_at"
+      ],
+      "title": "SessionInfo",
+      "type": "object"
+    },
+    "Subscription": {
+      "$defs": {
+        "BillingProvider": {
+          "enum": [
+            "paddle",
+            "yookassa",
+            "prodamus"
+          ],
+          "title": "BillingProvider",
+          "type": "string"
+        },
+        "SubscriptionStatus": {
+          "enum": [
+            "trialing",
+            "active",
+            "past_due",
+            "canceled",
+            "unpaid"
+          ],
+          "title": "SubscriptionStatus",
+          "type": "string"
+        }
+      },
+      "description": "The user's current subscription. ``provider_sub_id`` is the provider's\nsubscription id (Paddle subscription id / \u042eKassa recurring payment id).\n``status`` is updated ONLY by webhook events \u2014 never by the checkout\ncallback redirect. ``billing_country`` is fixed at checkout and selects\nwhich provider owns the lifecycle.",
+      "properties": {
+        "billing_country": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Billing Country"
+        },
+        "cancel_at_period_end": {
+          "default": false,
+          "title": "Cancel At Period End",
+          "type": "boolean"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "current_period_end": {
+          "format": "date-time",
+          "title": "Current Period End",
+          "type": "string"
+        },
+        "current_period_start": {
+          "format": "date-time",
+          "title": "Current Period Start",
+          "type": "string"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "plan_slug": {
+          "title": "Plan Slug",
+          "type": "string"
+        },
+        "provider": {
+          "$ref": "#/$defs/BillingProvider"
+        },
+        "provider_sub_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Sub Id"
+        },
+        "status": {
+          "$ref": "#/$defs/SubscriptionStatus"
+        },
+        "trial_ends_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Trial Ends At"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "plan_slug",
+        "provider",
+        "status",
+        "current_period_start",
+        "current_period_end",
+        "created_at"
+      ],
+      "title": "Subscription",
+      "type": "object"
+    },
+    "TelegramBindRequest": {
+      "description": "Body for ``POST /v1/messengers/telegram/{id}/bind``.\n\n``byok_enc_key_blob`` is the SAME ECDH-sealed shape the web chat sends on\n``/v1/llm/stream`` (XChaCha20-Poly1305 sealed to the server session pubkey,\nbase64). None = the bot uses server-fallback keys (env / mock). The server\ndecrypts once, envelope-wraps the plaintext key material, and stores ONLY\nthe envelope ciphertext.",
+      "properties": {
+        "byok_enc_key_blob": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Byok Enc Key Blob"
+        }
+      },
+      "title": "TelegramBindRequest",
+      "type": "object"
+    },
+    "TelegramInitRequest": {
+      "description": "Body for ``POST /v1/messengers/telegram`` \u2014 creates a pending messenger.",
+      "properties": {
+        "bot_token": {
+          "maxLength": 128,
+          "minLength": 10,
+          "title": "Bot Token",
+          "type": "string"
+        },
+        "persona_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Persona Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "bot_token",
+        "persona_id"
+      ],
+      "title": "TelegramInitRequest",
+      "type": "object"
+    },
+    "TelegramInitResponse": {
+      "$defs": {
+        "Messenger": {
+          "description": "A linked messenger bot. ``bot_token`` never appears here \u2014 only the\nmasked suffix for display. ``byok_bound`` tells the UI whether a BYOK key\nwas sealed during the handshake (false \u2192 server fallback keys).",
+          "properties": {
+            "bot_token_masked": {
+              "title": "Bot Token Masked",
+              "type": "string"
+            },
+            "bot_username": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Bot Username"
+            },
+            "byok_bound": {
+              "default": false,
+              "title": "Byok Bound",
+              "type": "boolean"
+            },
+            "chat_id": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Chat Id"
+            },
+            "created_at": {
+              "format": "date-time",
+              "title": "Created At",
+              "type": "string"
+            },
+            "id": {
+              "title": "Id",
+              "type": "string"
+            },
+            "kind": {
+              "$ref": "#/$defs/MessengerKind"
+            },
+            "last_error": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Last Error"
+            },
+            "last_seen_at": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Last Seen At"
+            },
+            "persona_id": {
+              "title": "Persona Id",
+              "type": "string"
+            },
+            "status": {
+              "$ref": "#/$defs/MessengerStatus"
+            },
+            "updated_at": {
+              "format": "date-time",
+              "title": "Updated At",
+              "type": "string"
+            },
+            "user_id": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "user_id",
+            "kind",
+            "status",
+            "persona_id",
+            "bot_token_masked",
+            "created_at",
+            "updated_at"
+          ],
+          "title": "Messenger",
+          "type": "object"
+        },
+        "MessengerKind": {
+          "enum": [
+            "telegram"
+          ],
+          "title": "MessengerKind",
+          "type": "string"
+        },
+        "MessengerStatus": {
+          "enum": [
+            "pending_handshake",
+            "active",
+            "paused",
+            "error"
+          ],
+          "title": "MessengerStatus",
+          "type": "string"
+        }
+      },
+      "description": "The connect-token drives the Telegram-side /start deep link. The web\nshows it (and a t.me link) so the user can paste it into their bot.",
+      "properties": {
+        "connect_token": {
+          "title": "Connect Token",
+          "type": "string"
+        },
+        "connect_url": {
+          "title": "Connect Url",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "messenger": {
+          "$ref": "#/$defs/Messenger"
+        }
+      },
+      "required": [
+        "messenger",
+        "connect_token",
+        "connect_url",
+        "expires_at"
+      ],
+      "title": "TelegramInitResponse",
+      "type": "object"
+    },
+    "TokenEvent": {
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "type": {
+          "const": "token",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "text"
+      ],
+      "title": "TokenEvent",
+      "type": "object"
+    },
+    "Tone": {
+      "properties": {
+        "direct": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Direct",
+          "type": "number"
+        },
+        "pace": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Pace",
+          "type": "number"
+        },
+        "warmth": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Warmth",
+          "type": "number"
+        }
+      },
+      "required": [
+        "warmth",
+        "direct",
+        "pace"
+      ],
+      "title": "Tone",
+      "type": "object"
+    },
+    "Usage": {
+      "properties": {
+        "completion_tokens": {
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "cost_usd": {
+          "title": "Cost Usd",
+          "type": "number"
+        },
+        "family_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Family Id"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_tokens": {
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "provider_kind": {
+          "title": "Provider Kind",
+          "type": "string"
+        },
+        "user_id": {
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "user_id",
+        "provider_kind",
+        "model",
+        "prompt_tokens",
+        "completion_tokens",
+        "cost_usd"
+      ],
+      "title": "Usage",
+      "type": "object"
+    },
+    "UsageEvent": {
+      "properties": {
+        "completion_tokens": {
+          "title": "Completion Tokens",
+          "type": "integer"
+        },
+        "cost_usd": {
+          "title": "Cost Usd",
+          "type": "number"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "prompt_tokens": {
+          "title": "Prompt Tokens",
+          "type": "integer"
+        },
+        "provider_kind": {
+          "title": "Provider Kind",
+          "type": "string"
+        },
+        "type": {
+          "const": "usage",
+          "title": "Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "provider_kind",
+        "model",
+        "prompt_tokens",
+        "completion_tokens",
+        "cost_usd"
+      ],
+      "title": "UsageEvent",
+      "type": "object"
+    }
+  }
+}

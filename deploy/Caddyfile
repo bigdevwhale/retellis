@@ -1,0 +1,43 @@
+# Stillside reverse proxy — single origin for the web PWA + the FastAPI API.
+#
+# Why a proxy at all (and not two ports)? The verified session cookie is
+# HttpOnly + Secure + SameSite=Lax. SameSite=Lax is only first-party when the
+# browser sees web (/) and API (/v1) on ONE origin — which is what this Caddy
+# gives us. It also closes the missing-TLS hole in the old deploy (credentials
+# over HTTP) and makes CORS moot. The browser talks to Caddy only; web and api
+# are not exposed to the host in the supported setup.
+#
+# CADDY_SITE controls the listen address:
+#   - local / no domain: CADDY_SITE=:80  (HTTP — fine for localhost; the cookie
+#     is marked Secure only when PUBLIC_ORIGIN is an https URL, so HTTP still
+#     carries it on localhost).
+#   - real domain:       CADDY_SITE=stillside.example  → Caddy auto-provisions
+#     TLS via Let's Encrypt and redirects 80 → 443. Set PUBLIC_ORIGIN to the
+#     https URL so cookies are marked Secure.
+
+{
+	admin off
+}
+
+{$CADDY_SITE} {
+	encode zstd gzip
+
+	# API surface (incl. the /v1/llm/stream SSE). flush_interval -1 disables
+	# response buffering so streamed tokens reach the browser immediately; the
+	# extended read/write timeouts keep long turns from being cut off.
+	@api path /v1/*
+	handle @api {
+		reverse_proxy api:8000 {
+			flush_interval -1
+			transport http {
+				read_timeout 5m
+				write_timeout 5m
+			}
+		}
+	}
+
+	# Everything else → the Next.js PWA (standalone server on :3000).
+	handle {
+		reverse_proxy web:3000
+	}
+}
