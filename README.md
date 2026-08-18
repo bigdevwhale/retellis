@@ -94,7 +94,7 @@ Toolchain: Node ≥20 (`.nvmrc`), pnpm@10.33.2 (`packageManager`), Python ≥3.1
 
 ## Security, told straight
 
-The security model is a feature, not an apology. Read the full invariants in [`CLAUDE.md`](.claude/CLAUDE.md); the load-bearing points:
+The security model is a feature, not an apology. The canonical, honest description of how your keys are stored — including what the server *can* decrypt — lives in [`SECURITY.md`](SECURITY.md); the load-bearing points:
 
 - **Keys are never stored in plaintext.** BYOK API keys and the Telegram `bot_token` are stored as envelope ciphertext (`api_key_ciphertext`, NaCl `SecretBox` under `MESSENGER_TOKEN_DEK`). The contract `Provider`/`FamilyProvider` models never carry the ciphertext — only a `key_handle` is returned to the client.
 - **Sealed once in transit.** Onboarding ECDH-seals the plaintext key to the server's session public key (`/v1/health` → `ecdh_pub`, `crypto_box_seal`). The server opens it with its session ECDH private key, envelope-encrypts, stores the ciphertext, drops the plaintext.

@@ -10,10 +10,12 @@
 //  - bot exists: a status card (status badge, persona, @username, chat id,
 //    last error) with Pause/Resume, persona switch, and Disconnect.
 //
-// Honest-limits copy (disclose, don't perform): the bot token is server-side
-// envelope-encrypted — the server CAN decrypt it (NOT zero-knowledge, unlike
-// BYOK). BYOK keys bound at handshake stay zero-knowledge up to the bind; after
-// that the server envelope-wraps them and can decrypt at turn time. We say so.
+// Honest-limits copy (disclose, don't perform): the bot token and BYOK keys
+// are both server-side envelope-encrypted under MESSENGER_TOKEN_DEK — the
+// server CAN decrypt them at reply time. This is NOT zero-knowledge. The UI
+// states only the neutral fact ("encrypted in transit and at rest on the
+// server") and points to SECURITY.md for the full disclosure; it never claims
+// zero-knowledge / on-device / "only you can read it".
 
 import {
   type TelegramInitResponse,
@@ -34,7 +36,7 @@ type Props = {
 };
 
 const STATUS_LABEL: Record<Messenger['status'], { en: string; ru: string }> = {
-  pending_handshake: { en: 'Pending handshake', ru: 'Ожидает привязки' },
+  pending_handshake: { en: 'Awaiting Telegram link', ru: 'Ожидает привязки' },
   active: { en: 'Active', ru: 'Активен' },
   paused: { en: 'Paused', ru: 'Приостановлен' },
   error: { en: 'Error', ru: 'Ошибка' },
@@ -211,8 +213,8 @@ export function TelegramIntegration({ messengers, onChanged, L2 }: Props) {
 
         <p className="help" style={{ marginTop: 8 }}>
           {L2({
-            en: 'Bot token is envelope-encrypted on the server (the server can decrypt it — not zero-knowledge). BYOK keys are sealed from this browser and the server wraps them once.',
-            ru: 'Токен бота хранится на сервере в envelope-шифре (сервер может его расшифровать — это не zero-knowledge). BYOK-ключи запечатываются из браузера, сервер оборачивает их один раз.',
+            en: 'The bot token and your API keys are encrypted in transit and at rest on the server. See SECURITY.md for how keys are stored.',
+            ru: 'Токен бота и ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере. Подробности о хранении ключей — в SECURITY.md.',
           })}
         </p>
 

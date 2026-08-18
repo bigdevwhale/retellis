@@ -57,19 +57,25 @@ const PlanIcon = (
 
 type Tab = { href: string; key: string; icon: React.ReactNode };
 
-// The 7 OD app tabs (order matches chat.html's header). Home leads the row
-// so the public landing is reachable from any in-app screen; brand click also
-// lands there but a tab is the conventional discoverability surface. Plans is
-// appended only when billing is served (hosted instances) — self-hosted hides
-// it, same gate as the rail.
-const APP_TABS: Tab[] = [
+// Primary tabs are the conversation surfaces a user reaches often: Home /
+// Chat / Memory / Journal / Practices / Personas. Config surfaces (Routing,
+// Family) and Plans are demoted into a "More" dropdown so they aren't peers of
+// Chat on the top bar — first-time visitors land on calm companion surfaces,
+// not engineering dashboards. Home leads the row so the public landing is
+// reachable from any in-app screen; brand click also lands there but a tab is
+// the conventional discoverability surface.
+const PRIMARY_TABS: Tab[] = [
   { href: '/', key: 'nav.home', icon: HomeIcon },
   { href: '/chat', key: 'nav.chat', icon: ChatIcon },
   { href: '/memory', key: 'nav.memories', icon: MemoryIcon },
   { href: '/journal', key: 'nav.journal', icon: JournalIcon },
   { href: '/practices', key: 'nav.practices', icon: PracticesIcon },
-  { href: '/routing', key: 'navtab.routing', icon: RoutingIcon },
   { href: '/persona', key: 'navtab.personas', icon: PersonasIcon },
+];
+
+// Secondary tabs — config + billing surfaces, shown under the "More" dropdown.
+const SECONDARY_TABS: Tab[] = [
+  { href: '/routing', key: 'navtab.routing', icon: RoutingIcon },
   { href: '/family', key: 'nav.family', icon: FamilyIcon },
 ];
 
@@ -91,7 +97,9 @@ export function TopBar() {
 
   // Mobile hamburger sheet (OD `.nav-mobile` / `.nav-sheet` pattern).
   const [menuOpen, setMenuOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -104,16 +112,31 @@ export function TopBar() {
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [menuOpen]);
 
+  // Close the "More" dropdown on outside click.
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setMoreOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [moreOpen]);
+
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`);
 
-  // The 7 OD tabs are shown to everyone — guests open informational showcase
-  // pages, signed-in users open the real app screens. Plans is appended only
-  // when billing is served (hosted instances).
-  const tabs: Tab[] = [
-    ...APP_TABS,
+  // Secondary tabs (Routing / Family / Plans) live under "More". Plans is
+  // appended only when billing is served (hosted instances).
+  const secondary: Tab[] = [
+    ...SECONDARY_TABS,
     ...(billing ? [{ href: '/plans', key: 'nav.plan', icon: PlanIcon }] : []),
   ];
+  // The mobile sheet lists every tab (primary + secondary) flat — no dropdown
+  // on the sheet itself.
+  const allTabs: Tab[] = [...PRIMARY_TABS, ...secondary];
+  const moreActive = secondary.some((tab) => isActive(tab.href));
 
   return (
     <header className="topbar-nav">
@@ -128,7 +151,7 @@ export function TopBar() {
       </Link>
 
       <nav className="topbar-links" aria-label="Primary">
-        {tabs.map((tab) => (
+        {PRIMARY_TABS.map((tab) => (
           <Link
             key={tab.key}
             href={tab.href}
@@ -139,6 +162,50 @@ export function TopBar() {
             <span>{t(tab.key)}</span>
           </Link>
         ))}
+        {secondary.length > 0 && (
+          <div className="topbar-more" ref={moreRef}>
+            <button
+              type="button"
+              className={`topbar-more-btn${moreActive ? ' active' : ''}`}
+              aria-haspopup="menu"
+              aria-expanded={moreOpen}
+              aria-current={moreActive ? 'page' : undefined}
+              onClick={() => setMoreOpen((o) => !o)}
+            >
+              <span>{t('navtab.more')}</span>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.6}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+            {moreOpen && (
+              <div
+                className="topbar-more-menu"
+                role="menu"
+                style={{ position: 'absolute', top: '100%', right: 0 }}
+              >
+                {secondary.map((tab) => (
+                  <Link
+                    key={tab.key}
+                    href={tab.href}
+                    role="menuitem"
+                    aria-current={isActive(tab.href) ? 'page' : undefined}
+                    className={isActive(tab.href) ? 'active' : ''}
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    {tab.icon && <TabIcon>{tab.icon}</TabIcon>}
+                    <span>{t(tab.key)}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       <div className="topbar-actions">
@@ -192,7 +259,7 @@ export function TopBar() {
 
       {menuOpen && (
         <div className="topbar-sheet" ref={sheetRef} data-open="true">
-          {tabs.map((tab) => (
+          {allTabs.map((tab) => (
             <Link
               key={tab.key}
               href={tab.href}

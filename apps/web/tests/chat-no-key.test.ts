@@ -7,6 +7,7 @@
 // A secondary "Reset? Wipe keys" affordance lets owners delete stale
 // server-side provider rows without navigating away.
 
+import type { AuthConfig } from '@ai-companion/contracts';
 import { Suspense, act, createElement } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -73,6 +74,21 @@ const validMe = {
 
 let getMeShouldThrow = false;
 let listProvidersMock = vi.fn(async () => [] as never[]);
+// Swappable auth config so we can exercise both self-hosted (billing off,
+// hard lockout) and hosted (billing on, lazy onboarding soft nudge).
+let getAuthConfigMock: () => Promise<AuthConfig> = vi.fn<() => Promise<AuthConfig>>(async () => ({
+  mode: 'self_hosted',
+  profile: 'local',
+  auth_backends: ['local'],
+  features: {
+    billing: false,
+    credits: false,
+    hosted_fallback: false,
+    magic_links: false,
+    journal: true,
+    shares: true,
+  },
+}));
 vi.mock('../lib/api-client', async () => {
   const actual = await vi.importActual<typeof import('../lib/api-client')>('../lib/api-client');
   return {
@@ -81,19 +97,7 @@ vi.mock('../lib/api-client', async () => {
       if (getMeShouldThrow) throw new Error('unauth');
       return validMe;
     },
-    getAuthConfig: vi.fn(async () => ({
-      mode: 'self_hosted',
-      profile: 'local',
-      auth_backends: ['local'],
-      features: {
-        billing: false,
-        credits: false,
-        hosted_fallback: false,
-        magic_links: false,
-        journal: true,
-        shares: true,
-      },
-    })),
+    getAuthConfig: () => getAuthConfigMock(),
     getHealth: vi.fn(async () => ({ ecdh_pub: 'PUBKEY' })),
     getFamily: vi.fn(async () => ({
       family: null,
@@ -142,6 +146,19 @@ afterEach(() => {
   push.mockReset();
   getMeShouldThrow = false;
   listProvidersMock = vi.fn(async () => [] as never[]);
+  getAuthConfigMock = vi.fn<() => Promise<AuthConfig>>(async () => ({
+    mode: 'self_hosted',
+    profile: 'local',
+    auth_backends: ['local'],
+    features: {
+      billing: false,
+      credits: false,
+      hosted_fallback: false,
+      magic_links: false,
+      journal: true,
+      shares: true,
+    },
+  }));
   resetPersonalVaultMock = vi.fn(async () => undefined);
   resetFamilyVaultMock = vi.fn(async () => ({
     providersDeleted: 1,
@@ -431,5 +448,67 @@ describe('ChatScreen — no-key lockout', () => {
     expect(text).not.toContain('stand-in');
     expect(text).not.toContain('заглушка');
     expect(text).toMatch(/no key|нет ключа/);
+  });
+});
+
+describe('ChatScreen — hosted lazy onboarding (soft nudge, not lockout)', () => {
+  beforeEach(() => {
+    // Hosted = billing on. A missing *personal* key is not a hard lockout —
+    // the routing chain falls through to env keys / MockAdapter, so the app
+    // always answers. The composer stays enabled and a soft nudge shows.
+    getAuthConfigMock = vi.fn<() => Promise<AuthConfig>>(async () => ({
+      mode: 'hosted',
+      profile: 'local',
+      auth_backends: ['local'],
+      features: {
+        billing: true,
+        credits: true,
+        hosted_fallback: true,
+        magic_links: false,
+        journal: true,
+        shares: true,
+      },
+    }));
+  });
+
+  it('keeps the personal composer enabled with no BYOK key and shows a soft nudge (no reset button)', async () => {
+    await mountAndSettle(() => {
+      useStore.setState({
+        activePersonaId: 'aria',
+        family: null,
+        familyProvider: null,
+        activeProvider: null,
+      });
+    });
+
+    const textarea = container!.querySelector('textarea') as HTMLTextAreaElement | null;
+    expect(textarea).not.toBeNull();
+    // Composer is ENABLED on hosted — chat works via env/mock fallback.
+    expect(textarea!.disabled).toBe(false);
+
+    // The soft nudge banner renders and links to onboarding.
+    const banner = container!.querySelector('.chat-locked-banner') as HTMLElement | null;
+    expect(banner).not.toBeNull();
+    const link = banner!.querySelector('a') as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    expect(link!.getAttribute('href')).toBe('/onboarding');
+
+    // No scary "Reset? Wipe keys" affordance on a soft nudge — the user
+    // simply hasn't added a key yet.
+    const buttons = Array.from(banner!.querySelectorAll('button'));
+    const resetBtn = buttons.find((b) => /Reset\?|Сбросить\?/i.test(b.textContent ?? ''));
+    expect(resetBtn).toBeUndefined();
+  });
+
+  it('still hard-locks the family persona with no family key on hosted (a shared key is not deferrable)', async () => {
+    await mountAndSettle(() => {
+      setupFamilyPersona({ familyProvider: null });
+    });
+
+    const textarea = container!.querySelector('textarea') as HTMLTextAreaElement | null;
+    expect(textarea!.disabled).toBe(true);
+
+    const banner = container!.querySelector('.chat-locked-banner') as HTMLElement | null;
+    expect(banner).not.toBeNull();
   });
 });

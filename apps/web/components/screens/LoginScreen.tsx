@@ -44,7 +44,7 @@ export function LoginScreen() {
   const { L2, lang, toggleLang } = useLang();
   const { toggle: toggleTheme } = useTheme();
   const search = useSearchParams();
-  const next = search.get('next') ?? '/';
+  const next = search.get('next');
 
   const [config, setConfig] = useState<AuthConfig | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,8 +71,11 @@ export function LoginScreen() {
 
   const finish = () => {
     // Cookie is now set; let middleware/app shell take over. A hard navigation
-    // avoids serving cached unauthenticated state.
-    window.location.href = next;
+    // avoids serving cached unauthenticated state. On hosted, a sign-in with no
+    // explicit `next` lands in /chat (lazy onboarding — chat first, keys later);
+    // self-hosted lands on / as before.
+    const dest = next ?? (isHosted ? '/chat' : '/');
+    window.location.href = dest;
   };
 
   const onLocal = async (e: React.FormEvent) => {

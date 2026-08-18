@@ -122,7 +122,14 @@ export function RoutingScreen() {
                 ))
               )}
             </div>
-            <p className="chain-note">{t('rt.chain.note')}</p>
+            <p className="chain-note">{t('rt.chain.note.short')}</p>
+            {/* The longer "how routing decides" detail — collapsed by default
+                so the engineering depth is opt-in, not in a first-time user's
+                face. BYOK-skip-self / 429-5xx-timeout / budget-first lives here. */}
+            <details className="chain-details">
+              <summary>{t('rt.chain.details')}</summary>
+              <p className="chain-note">{t('rt.chain.note')}</p>
+            </details>
           </div>
         </section>
 

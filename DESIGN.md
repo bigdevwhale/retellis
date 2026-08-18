@@ -123,7 +123,7 @@ A calm, premium, trustworthy surface — the emotional register of a quiet, well
 - Companion voice: warm, plain, never syrupy. Short sentences. Names the emotion before offering a frame ("That sounds heavy. Want to sit with it, or map it out?").
 - UI copy: precise and quiet. "Add a provider" not "Supercharge your AI!". Empty states are one gentle sentence + one action.
 - Technical copy (routing, keys): exact and brief. "OpenAI · gpt-5-mini · 12 reqs · $0.041". No exclamation marks anywhere.
-- Disclosure honesty (per product principle): companion never claims feelings it doesn't have; UI never claims confidentiality it can't guarantee.
+- Disclosure honesty (per product principle): companion never claims feelings it doesn't have; UI never claims confidentiality it can't guarantee. Key copy in the UI is neutral-true ("encrypted in transit and at rest on the server") and never implies zero-knowledge, on-device custody, or "only you can read it." The full disclosure — that the server holds the DEK and can decrypt keys at reply time, i.e. this is *not* zero-knowledge — lives in `SECURITY.md`, not on every screen.
 
 ## 8. Accessibility
 
@@ -138,4 +138,4 @@ A calm, premium, trustworthy surface — the emotional register of a quiet, well
 - No simulating affect ("I feel your pain") — disclose, don't perform.
 - No raw API key shown unmasked; mono-masked always, reveal-on-hold with audit log.
 - No gratuitous animation, no bounce, no parallax on companion surfaces.
-- No storing/echoing keys server-side in plaintext — vault is local/encrypted (see `CLAUDE.md` § BYOK key storage).
+- No storing/echoing keys server-side in plaintext — keys are envelope-encrypted server-side (see `SECURITY.md`). No client vault, no on-device key custody — do not reintroduce "encrypted on-device" / "zero-knowledge" claims in UI copy.

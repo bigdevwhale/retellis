@@ -73,7 +73,12 @@ export function ChatScreen() {
   // Auth context — used by the family lockout banner to gate the
   // "Forgot? Reset" affordance to the family owner (non-owners use
   // "Leave family" instead, which is a different destructive action).
-  const { principal, loading: authLoading } = useAuthCtx();
+  const { principal, config, loading: authLoading } = useAuthCtx();
+  // Hosted = billing on. Used for lazy onboarding: on hosted a missing
+  // *personal* key is not a hard lockout — the routing chain falls through to
+  // env keys and MockAdapter, so the app always answers. We show a soft nudge
+  // and keep the composer enabled instead of disabling chat.
+  const hosted = !!config?.features.billing;
 
   const convo = convos.find((c) => c.id === activeConvoId) ?? convos[0];
   const persona = personaById(convo?.personaId ?? activePersonaId, personas());
@@ -90,6 +95,10 @@ export function ChatScreen() {
     ? !family ||
       (family.use_owner_personal_key ? !activeProvider?.keyHandle : !familyProvider?.key_handle)
     : !activeProvider?.keyHandle;
+  // Soft nudge (hosted only, personal scope): no BYOK key, but chat is not
+  // disabled — env/mock serves the turn. Family no-key stays a hard lockout on
+  // both modes (a shared family key is a real prerequisite, not deferrable).
+  const softNudge = hosted && !isFam && noKey;
 
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -115,6 +124,20 @@ export function ChatScreen() {
   // the server has persisted the just-finished turn (_after_done runs after
   // the stream closes) and briefly drop it from view.
   const lastSendAtRef = useRef(0);
+  // Whether the user is currently pinned to the bottom of the stream. Updated
+  // by the onScroll handler on every scroll — the user's own scroll position
+  // is the source of truth for "am I at the bottom?", NOT a post-append
+  // distance measurement (which is wrong: the just-appended bubble itself
+  // pushes scrollHeight past the threshold and suppresses the very scroll we
+  // want). Reset to true on conversation switch so a newly-opened thread
+  // scrolls to the latest instead of inheriting the previous thread's
+  // scrolled-up state.
+  const pinnedRef = useRef(true);
+  const onStreamScroll = () => {
+    const el = streamRef.current;
+    if (!el) return;
+    pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
 
   const {
     supported,
@@ -195,17 +218,23 @@ export function ChatScreen() {
     if (msgCount === 0 && !typing && streaming === null) return;
     const el = streamRef.current;
     if (!el) return;
-    // Only auto-follow when the user is already near the bottom — otherwise
-    // yanking them down mid-read (history scroll-up) is jarring. While
-    // streaming, use instant scroll: the CSS `scroll-behavior: smooth` would
-    // queue a smooth animation per token and look segued/janky.
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    // Only auto-follow when the user is pinned to the bottom — otherwise
+    // yanking them down mid-read (history scroll-up) is jarring. `pinnedRef`
+    // is maintained by the onScroll handler and reflects the user's position
+    // BEFORE this render's new content was appended, so the just-added
+    // bubble can't push us past the threshold and suppress the scroll we
+    // actually want (the old post-append distance check did exactly that — a
+    // bubble taller than ~80px made nearBottom false at send time, so the
+    // chat never auto-scrolled on send). While streaming, use instant
+    // scroll: the CSS `scroll-behavior: smooth` would queue a smooth
+    // animation per token and look segued/janky.
+    if (!pinnedRef.current) return;
     if (streaming !== null || typing) {
-      if (nearBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
+      el.scrollTo({ top: el.scrollHeight, behavior: 'auto' });
     } else {
       el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
     }
-  }, [convo?.msgs.length, typing, streaming]);
+  }, [convo?.id, convo?.msgs.length, typing, streaming]);
 
   // K3: switching conversation mid-stream used to leak — streaming/typing
   // and accRef/abortRef are component-level, not per-convo, so the streaming
@@ -231,6 +260,14 @@ export function ChatScreen() {
       setStreaming(null);
       setTyping(false);
     };
+  }, [activeConvoId]);
+
+  // Reset the pin on conversation switch: a freshly-opened thread should
+  // scroll to the latest rather than inherit the previous thread's scrolled-
+  // up state (pinnedRef would otherwise stay false if the user had scrolled up
+  // to read history in the thread they just left).
+  useEffect(() => {
+    pinnedRef.current = true;
   }, [activeConvoId]);
 
   // Provider re-discovery for the lockout banner. After a page refresh the
@@ -804,7 +841,7 @@ export function ChatScreen() {
 
   const placeholder = useMemo(
     () =>
-      noKey
+      noKey && !softNudge
         ? L2({
             en: 'Chat is disabled — add a key in settings to start.',
             ru: 'Чат выключен — добавьте ключ в настройках, чтобы начать.',
@@ -813,7 +850,7 @@ export function ChatScreen() {
             en: `Write or speak to ${persona.name}… (Enter to send)`,
             ru: `Напишите или скажите ${persona.name}… (Enter — отправить)`,
           }),
-    [L2, persona.name, noKey],
+    [L2, persona.name, noKey, softNudge],
   );
 
   // Lockout banner. The same noKey state that disables the composer is
@@ -902,6 +939,20 @@ export function ChatScreen() {
         }),
       };
     }
+    // Hosted lazy onboarding: no personal key yet, but the chain falls through
+    // to env keys / MockAdapter — chat works. Show a soft, non-blocking nudge
+    // (no scary "Reset? Wipe keys" affordance — they simply haven't added a
+    // key yet). Self-hosted keeps the hard lockout + reset path below.
+    if (hosted) {
+      return {
+        msg: L2({
+          en: "You're chatting on shared keys. Add your own any time for full control.",
+          ru: 'Вы общаетесь на общих ключах. Добавьте свой в любое время для полного контроля.',
+        }),
+        href: '/onboarding',
+        link: L2({ en: 'Add your key →', ru: 'Добавить ключ →' }),
+      };
+    }
     return {
       msg: L2({
         en: 'No personal LLM key yet. Add one in Onboarding to enable the chat.',
@@ -915,7 +966,7 @@ export function ChatScreen() {
       // re-rendering in the "no key" sub-case.
       resetKind: 'personal',
     };
-  }, [noKey, isFam, family, discoveryError, principal, L2]);
+  }, [noKey, isFam, family, discoveryError, principal, L2, hosted]);
 
   const messages = convo?.msgs ?? [];
 
@@ -1281,7 +1332,7 @@ export function ChatScreen() {
           </div>
         )}
 
-        <div className="stream" ref={streamRef}>
+        <div className="stream" ref={streamRef} onScroll={onStreamScroll}>
           {messages.map((m, i) => {
             // Joint (shared family) thread: attribute each bubble to its
             // author. Other members' user messages align LEFT as `.msg.other`
@@ -1646,12 +1697,22 @@ export function ChatScreen() {
           <button
             type="button"
             className={`mic${listening ? ' on' : ''}`}
-            title={noKey ? t('chat.voicefail') : supported ? t('chat.voice') : t('chat.voicefail')}
+            title={
+              noKey && !softNudge
+                ? t('chat.voicefail')
+                : supported
+                  ? t('chat.voice')
+                  : t('chat.voicefail')
+            }
             aria-label={
-              noKey ? t('chat.voicefail') : supported ? t('chat.voice') : t('chat.voicefail')
+              noKey && !softNudge
+                ? t('chat.voicefail')
+                : supported
+                  ? t('chat.voice')
+                  : t('chat.voicefail')
             }
             aria-pressed={listening}
-            disabled={!supported || noKey}
+            disabled={!supported || (noKey && !softNudge)}
             onClick={() => (listening ? stopListen() : startListen((txt) => setInput(txt)))}
           >
             <svg
@@ -1676,12 +1737,13 @@ export function ChatScreen() {
               // some browsers still let focus/IME fire onChange in edge cases.
               // We additionally ignore the event so no character is ever
               // staged. The user sees the placeholder and the banner above.
-              if (noKey) return;
+              // softNudge (hosted, no personal key) keeps the composer open.
+              if (noKey && !softNudge) return;
               setInput(e.target.value);
               autosize();
             }}
             onKeyDown={(e) => {
-              if (noKey) {
+              if (noKey && !softNudge) {
                 // Suppress Enter-to-send. Otherwise a stuck focus would
                 // trigger send() on a still-empty locked composer.
                 if (e.key === 'Enter') e.preventDefault();
@@ -1692,8 +1754,8 @@ export function ChatScreen() {
                 send();
               }
             }}
-            disabled={noKey}
-            aria-disabled={noKey}
+            disabled={noKey && !softNudge}
+            aria-disabled={noKey && !softNudge}
           />
           <button
             type="button"
@@ -1701,7 +1763,7 @@ export function ChatScreen() {
             onClick={streaming !== null ? stop : () => send()}
             title={streaming !== null ? t('chat.stop') : t('nav.newchat')}
             aria-label={streaming !== null ? t('chat.stop') : t('nav.newchat')}
-            disabled={noKey && streaming === null}
+            disabled={noKey && !softNudge && streaming === null}
           >
             {streaming !== null ? (
               <svg

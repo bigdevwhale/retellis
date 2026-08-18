@@ -7,10 +7,10 @@ People who want an AI companion today choose between closed products that harves
 ## Brand contract ("disclose, don't perform")
 
 - The companion **never claims feelings it doesn't have**; no affective claims the system can't back.
-- The UI **never claims confidentiality it can't guarantee** (e.g. zeroize disclosure is honest: source buffers are wiped, but immutable strings on managed heaps cannot be). BYOK keys are disclosed as **server-managed envelope encryption, not zero-knowledge** — the server holds `MESSENGER_TOKEN_DEK` and can decrypt them at reply time; this protects against a database dump, not against the server operator.
+- The UI **never claims confidentiality it can't guarantee** (e.g. zeroize disclosure is honest: source buffers are wiped, but immutable strings on managed heaps cannot be). BYOK keys are **server-managed envelope encryption, not zero-knowledge** — the server holds `MESSENGER_TOKEN_DEK` and can decrypt them at reply time; this protects against a database dump, not against the server operator. **As of 2026-07-27 the full disclosure lives in `SECURITY.md`, not in the UI.** UI key copy is neutral-true ("encrypted in transit and at rest on the server") and must never imply zero-knowledge, on-device custody, or "only you can read it." The Settings → Key vault tab shows a one-line neutral statement + a link to `SECURITY.md`.
 - **No fabricated data in the UI** — no fake key fingerprints (`sk-••••3a2f` from the OD design was deliberately NOT reproduced), no invented memory chips, no fake member lists. Journal shows `mood`/`tags` exactly as the user authored them, never generated.
 - Practices screen carries "tools, not a replacement for therapy"; family screen carries "not a licensed clinician · 112/911".
-- Your API keys are stored envelope-encrypted on the server; the server can decrypt them at reply time (not zero-knowledge). Clearing your browser data no longer loses your keys (they live on the server). We disclose this plainly. (Replaces the old "forgetting the vault passphrase = no recovery" line — there is no passphrase now.)
+- Your API keys are stored envelope-encrypted on the server; the server can decrypt them at reply time (not zero-knowledge). Clearing your browser data no longer loses your keys (they live on the server). The full disclosure is in `SECURITY.md`; the UI states only the neutral fact and links there. (Replaces the old "forgetting the vault passphrase = no recovery" line — there is no passphrase now.)
 
 ## The app surface (Next.js PWA, OD design system, Stripe palette)
 

@@ -185,10 +185,11 @@ describe('FamilySettingsScreen — owner lands on the Family key tab after creat
     expect(createFamilyMock).toHaveBeenCalledTimes(1);
     expect(createFamilyMock.mock.calls[0]?.[0]).toEqual({ name: 'My Family' });
 
-    // The owner is routed straight to the Family key sub-tab with the
-    // "vault ready" flash — NOT pushed (no history pollution), and NOT
-    // left on the Members tab.
-    expect(replace).toHaveBeenCalledWith('/family?tab=settings&subtab=key&flash=vault_ready');
+    // The owner is routed to Members with the "family created" flash — they
+    // invite members first and add a family key when ready (the flash links to
+    // the key sub-tab). NOT pushed (no history pollution), and NOT funneled
+    // straight into the key form.
+    expect(replace).toHaveBeenCalledWith('/family?tab=members&flash=family_created');
     expect(push).not.toHaveBeenCalled();
   });
 });

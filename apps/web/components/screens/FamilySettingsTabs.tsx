@@ -103,26 +103,11 @@ function FamilySettingsTabsInner() {
         : 'therapist';
   })();
   const [tab, setTabState] = useState<Tab>(initialTab);
-  const [flash, setFlash] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(() => {
-    const f = searchParams.get('flash');
-    if (f === 'vault_ready') {
-      return {
-        kind: 'ok',
-        msg: 'Family created. Add the family’s LLM API key so members can chat.',
-      };
-    }
-    return null;
-  });
-  useEffect(() => {
-    if (!searchParams.get('flash')) return;
-    const sp = new URLSearchParams(searchParams.toString());
-    sp.delete('flash');
-    const qs = sp.toString();
-    // Strip the one-shot ?flash= while staying on the outer /family
-    // page (the legacy /family/settings backstop rewrites the URL on
-    // first mount, so we just need to preserve the rest).
-    router.replace(qs ? `/family?${qs}` : '/family');
-  }, [searchParams, router]);
+  // Inline ok/err flashes from in-tab actions (disband, invite, reset). The
+  // one-shot `?flash=family_created` URL banner is handled by the parent
+  // FamilySettingsScreen so it shows on the Members tab too (this component
+  // only mounts on the Settings tab).
+  const [flash, setFlash] = useState<{ kind: 'ok' | 'err'; msg: string } | null>(null);
 
   const setTab = useCallback(
     (next: Tab) => {
@@ -164,22 +149,6 @@ function FamilySettingsTabsInner() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  // Phase 2 #7: a returning owner with no family key yet lands on the
-  // Family key sub-tab (where the form lives) instead of Invites — the
-  // key is the prerequisite for everything else, so don't bury it. Only
-  // fires when no explicit `?subtab=` was requested (a deep link / the
-  // post-create redirect both set an explicit subtab and win).
-  useEffect(() => {
-    // "Key satisfied" covers both family-key modes: a family_providers row
-    // (default) OR the family's `use_owner_personal_key` flag on (the family
-    // rides the owner's personal key — no family key row needed).
-    if (familyProvider?.key_handle) return;
-    if (family?.use_owner_personal_key) return;
-    if (!isFamilyOwner(principal, family)) return; // members keep their default
-    if (searchParams.get('subtab') ?? searchParams.get('tab')) return; // explicit
-    setTab('key');
-  }, [familyProvider, family, principal, searchParams, setTab]);
 
   // If the user is not in a family (e.g. landed here via a deep link),
   // bounce back to /family — the empty state is the right place to
@@ -750,16 +719,13 @@ function FamilyKeyTab({
         </div>
       )}
 
-      {/* Honest disclosure — the load-bearing "NOT zero-knowledge" brand
-          contract. Sits at the bottom like the personal vault's hint. The
-          personal-key mode is the same model (the owner's key is decrypted
-          in memory only for a member's reply and zeroized after; members
-          never see it), restated so the disclosure can't be read as
-          family-key-only. */}
+      {/* Neutral key-storage note + docs pointer. The full disclosure (the
+          server holds the DEK and can decrypt at reply time — not
+          zero-knowledge) lives in SECURITY.md, not on this surface. */}
       <p className="help" style={{ marginTop: 12 }}>
         {L2({
-          en: 'The family API key is sealed in transit and stored envelope-encrypted on the server. The server holds the decryption key and can read it at reply time — NOT zero-knowledge; it protects against a database dump, not the server operator. The key is decrypted in memory only for the reply and zeroized after. When “Use my personal key” is on, the owner’s active personal key is used for every family member’s turn under the same rules — decrypted in memory per reply, zeroized after; members never see it. Because keys live on the server, they work across all family members.',
-          ru: 'Семейный ключ API запечатывается при передаче и хранится на сервере в конвертном шифровании. Сервер хранит ключ расшифровки и может прочитать его при ответе — НЕ нулевое разглашение; защищает от дампа БД, а не от оператора сервера. Ключ расшифровывается в памяти только для ответа и затем обнуляется. Когда включено «Использовать мой личный ключ», активный личный ключ владельца обслуживает каждый ход члена семьи по тем же правилам — расшифровывается в памяти для ответа и обнуляется после; члены семьи никогда не видят ключ. Поскольку ключи на сервере, они работают у всех членов семьи.',
+          en: 'The family API key is encrypted in transit and at rest on the server. See SECURITY.md for how keys are stored.',
+          ru: 'Семейный ключ API шифруется при передаче и хранится зашифрованным на сервере. Подробности о хранении ключей — в SECURITY.md.',
         })}
       </p>
     </div>

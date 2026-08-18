@@ -503,8 +503,8 @@ function SettingsScreenInner() {
               {principal && (
                 <p className="help">
                   {L2({
-                    en: `Signed in via ${principal.auth_backend}. Signing out also locks the vault on this device.`,
-                    ru: `Вход через ${principal.auth_backend}. Выход также блокирует хранилище на этом устройстве.`,
+                    en: `Signed in via ${principal.auth_backend}. Signing out clears keys from this device.`,
+                    ru: `Вход через ${principal.auth_backend}. Выход очищает ключи с этого устройства.`,
                   })}
                 </p>
               )}
@@ -906,6 +906,13 @@ function SettingsScreenInner() {
                   <p className="help" style={{ marginTop: 8 }}>
                     {t('set.vault.hint')}
                   </p>
+                  {/* Docs pointer (not disclosure): the full key-storage detail
+                      lives in SECURITY.md. Rendered as a labeled pointer rather
+                      than a link because no docs URL is hosted yet — becomes a
+                      real <Link> once SECURITY.md is served at a stable URL. */}
+                  <span className="help" style={{ display: 'inline-block', marginTop: 4 }}>
+                    {t('set.vault.docs')}
+                  </span>
                 </>
               )}
 
@@ -960,8 +967,8 @@ function SettingsScreenInner() {
                   <h4>{L2({ en: 'Wipe this device', ru: 'Очистить это устройство' })}</h4>
                   <p>
                     {L2({
-                      en: 'Removes memory, conversations, and the local vault from this device. The server copy is not touched.',
-                      ru: 'Удаляет память, диалоги и локальное хранилище с этого устройства. Серверная копия не затрагивается.',
+                      en: 'Removes memory and conversations from this device. The server copy is not touched.',
+                      ru: 'Удаляет память и диалоги с этого устройства. Серверная копия не затрагивается.',
                     })}
                   </p>
                   <button type="button" className="btn btn-danger-ghost" disabled>

@@ -72,9 +72,14 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Забывает контекст, ответы выхолащиваются со временем, голос плывёт, ключи у вендора.',
   },
   'landing.diff.b.p': {
-    en: 'Event-chain memory with emotional salience — remembers what matters without cooling. A persona block injected every turn — voice doesn’t drift. Keys are yours, encrypted on-device.',
-    ru: 'Event-chain память с эмоциональной значимостью — помнит важное, не охлаждая. Persona-блок инжектируется каждый ход — голос не дрейфит. Ключи только ваши, зашифрованы на устройстве.',
+    en: 'Memory that keeps the emotional thread — remembers what matters without cooling. A steady voice set fresh every turn — it doesn’t drift. Keys are yours, encrypted on the server.',
+    ru: 'Память, хранящая эмоциональную нить — помнит важное, не охлаждая. Стабильный голос задаётся каждый ход заново — не дрейфит. Ключи только ваши, зашифрованы на сервере.',
   },
+  // Flowline chips under the diff section — the context-build pipeline.
+  'landing.flowline.persona': { en: 'persona block injected', ru: 'блок персоны вставляется' },
+  'landing.flowline.chains': { en: 'salient chains', ru: 'значимые цепочки' },
+  'landing.flowline.window': { en: 'recent window', ru: 'недавнее окно' },
+  'landing.flowline.msg': { en: 'msg', ru: 'сообщение' },
 
   'landing.why.eyebrow': {
     en: '03 · why stillside',
@@ -97,8 +102,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Свои ключи — свой контроль',
   },
   'landing.why.a2.p': {
-    en: 'Your API keys, sealed in transit and stored envelope-encrypted on the server. The server holds the decryption key and can read your key at reply time — NOT zero-knowledge; protects against a database dump, not the server operator.',
-    ru: 'Свои API-ключи, запечатанные при передаче и хранящиеся на сервере в конвертном шифровании. Сервер хранит ключ расшифровки и может прочитать ваш ключ при ответе — НЕ нулевое разглашение; защита от дампа БД, а не от оператора сервера.',
+    en: 'Your API keys, encrypted in transit and at rest on the server. See SECURITY.md for how keys are stored.',
+    ru: 'Ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере. Подробности о хранении ключей — в SECURITY.md.',
   },
   'landing.why.a3.h3': { en: 'Family therapy', ru: 'Семейная терапия' },
   'landing.why.a3.p': {
@@ -186,6 +191,15 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'BYOK выигрывает даже при наличии env-ключей; подходящий по типу env-кандидат пропускается. На 429/5xx/timeout — тихий переход к следующему. Бюджет проверяется первым.',
   },
   'landing.tech.table.provider': { en: 'Provider', ru: 'Провайдер' },
+  'landing.tech.table.model': { en: 'Model', ru: 'Модель' },
+  'landing.tech.table.reqs': { en: 'reqs', ru: 'запр.' },
+  'landing.tech.table.tokens': { en: 'tokens', ru: 'токены' },
+  'landing.tech.table.cost': { en: 'cost', ru: 'стоимость' },
+  // Chain chips in the tech-depth panel (self-hosted landing only).
+  'landing.chainchip.byok': { en: 'BYOK key', ru: 'BYOK-ключ' },
+  'landing.chainchip.env': { en: 'env', ru: 'env' },
+  'landing.chainchip.ollama': { en: 'ollama', ru: 'ollama' },
+  'landing.chainchip.fallback': { en: 'local fallback', ru: 'локальный резерв' },
   'landing.tech.budget.title': { en: 'Monthly budget', ru: 'Месячный бюджет' },
   'landing.tech.budget.lbl': { en: 'of $0.64 limit', ru: 'из лимита $0.64' },
   'landing.tech.budget.note': {
@@ -255,7 +269,7 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   },
   'landing.limits.h2': {
     en: 'Disclose, don’t perform',
-    ru: 'Disclose, don’t perform',
+    ru: 'Раскрывать, не играть',
   },
   'landing.limits.1.lead': {
     en: 'The family therapist is not a licensed clinician.',
@@ -279,12 +293,12 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: ' настроение и «насколько важно» — авторские, не генерируются; компаньон не додумывает эмоции за вас.',
   },
   'landing.limits.4.lead': {
-    en: 'Your API key is sealed in transit and stored envelope-encrypted on the server',
-    ru: 'Ваш API-ключ запечатывается при передаче и хранится на сервере в конвертном шифровании',
+    en: 'The companion is a voice, not a person.',
+    ru: 'Компаньон — голос, не человек.',
   },
   'landing.limits.4.body': {
-    en: ' — the server holds the decryption key and can read your key at reply time. This is NOT zero-knowledge: it protects against a database dump, not the server operator. The key is decrypted in memory only for the reply and zeroized after. Because keys live on the server, they survive a browser-data wipe and work across your devices.',
-    ru: ' — сервер хранит ключ расшифровки и может прочитать ваш ключ при ответе. Это НЕ нулевое разглашение: защита от дампа БД, а не от оператора сервера. Ключ расшифровывается в памяти только для ответа и затем обнуляется. Поскольку ключи на сервере, они переживут очистку данных браузера и работают на всех ваших устройствах.',
+    en: " It doesn't perform feelings it doesn't have.",
+    ru: ' Он не играет чувства, которых у него нет.',
   },
 
   'landing.closing.h2': {
@@ -317,8 +331,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'onb.p.ollama': { en: 'local · offline', ru: 'локально · офлайн' },
   'onb.c2.title': { en: 'Add your key', ru: 'Добавьте ключ' },
   'onb.c2.desc': {
-    en: 'Sealed in transit to the server and stored envelope-encrypted on the server. The server holds the decryption key and can read your key at reply time — NOT zero-knowledge; it protects against a database dump, not the server operator.',
-    ru: 'Запечатывается при передаче на сервер и хранится на сервере в конвертном шифровании. Сервер хранит ключ расшифровки и может прочитать ваш ключ при ответе — НЕ нулевое разглашение; защита от дампа БД, а не от оператора сервера.',
+    en: 'Your API key is encrypted in transit and at rest on the server.',
+    ru: 'Ваш API-ключ шифруется при передаче и хранится зашифрованным на сервере.',
   },
   'onb.summary.title': {
     en: 'Your provider',
@@ -341,13 +355,13 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Нет совпадений — Enter, чтобы ввести своё',
   },
   'onb.key': { en: 'API key', ru: 'API-ключ' },
-  'onb.reveal': { en: 'Hold to reveal', ru: 'Удерживайте, чтобы показать' },
+  'onb.reveal': { en: 'Show', ru: 'Показать' },
   'onb.hide': { en: 'Hide', ru: 'Скрыть' },
   'onb.showpass': { en: 'Show', ru: 'Показать' },
   'onb.hidepass': { en: 'Hide', ru: 'Скрыть' },
   'onb.keyhelp': {
-    en: 'Sealed to the server session key (ECDH) once, then envelope-encrypted at rest on the server. The server holds the decryption key and can read your key at reply time.',
-    ru: 'Однократно запечатывается сессионным ключом сервера (ECDH), затем хранится на сервере в конвертном шифровании. Сервер хранит ключ расшифровки и может прочитать ваш ключ при ответе.',
+    en: 'Your API key is encrypted in transit and at rest on the server.',
+    ru: 'Ваш API-ключ шифруется при передаче и хранится зашифрованным на сервере.',
   },
   'onb.label': { en: 'Label', ru: 'Метка' },
   'onb.model': { en: 'Model', ru: 'Модель' },
@@ -398,8 +412,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'onb.reset.confirm.yes': { en: 'Wipe & reset', ru: 'Стереть и сбросить' },
   'onb.reset.confirm.no': { en: 'Cancel', ru: 'Отмена' },
   'onb.success': {
-    en: 'Connected. Your key is sealed in transit and stored envelope-encrypted on the server. The server holds the decryption key and can read it at reply time — NOT zero-knowledge; it protects against a database dump, not the server operator.',
-    ru: 'Подключено. Ключ запечатан при передаче и хранится на сервере в конвертном шифровании. Сервер хранит ключ расшифровки и может прочитать его при ответе — НЕ нулевое разглашение; защита от дампа БД, а не от оператора сервера.',
+    en: 'Connected. Your key is encrypted and ready to use.',
+    ru: 'Подключено. Ключ зашифрован и готов к использованию.',
   },
   'onb.alt': {
     en: "Don't have a key, or don't want to manage one?",
@@ -408,8 +422,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'onb.alt.link': { en: 'Use a hosted plan →', ru: 'Выбрать облачный тариф →' },
   'onb.c3.title': { en: 'Pick a companion to start', ru: 'Выберите собеседника' },
   'onb.c3.desc': {
-    en: 'Five are ready out of the box. Customize any of them, or build your own in the Companions tab.',
-    ru: 'Пять готовы из коробки. Настройте любого из них или создайте своего во вкладке «Собеседники».',
+    en: 'Ready-made companions, or your own. Customize any of them, or build your own in the Companions tab.',
+    ru: 'Готовые компаньоны или свой. Настройте любого из них или создайте своего во вкладке «Собеседники».',
   },
   'onb.start': { en: 'Start chatting →', ru: 'Начать чат →' },
 
@@ -450,9 +464,11 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   },
   'chat.voice': { en: 'Voice mode', ru: 'Голосовой режим' },
   // Composer key indicator (OD `keyind`): an honest read of the active key
-  // source. Never shows a fake key fingerprint — the client is zero-knowledge
-  // (the opaque key_handle is NOT the key), so we surface the provider kind +
-  // "connected"/"no key" + a change link instead of `sk-•••3a2f`.
+  // source. Never shows a fake key fingerprint — the client only holds an
+  // opaque key_handle (NOT the plaintext key; the plaintext lives
+  // server-side, envelope-encrypted — see SECURITY.md), so we surface the
+  // provider kind + "connected"/"no key" + a change link instead of
+  // `sk-•••3a2f`.
   'chat.keyind.connected': { en: 'connected', ru: 'подключён' },
   'chat.keyind.none': { en: 'no key', ru: 'нет ключа' },
   'chat.keyind.change': { en: 'change', ru: 'сменить' },
@@ -621,8 +637,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'guest.badge': { en: 'sample', ru: 'пример' },
   'guest.cta.title': { en: 'Sign in to use yours', ru: 'Войдите, чтобы использовать свои' },
   'guest.cta.note': {
-    en: 'Bring your own keys or use ours. Keys are sealed in transit and stored envelope-encrypted on the server — the server holds the decryption key and can read your key at reply time (NOT zero-knowledge; protects against a database dump, not the server operator).',
-    ru: 'Свои ключи или наши. Ключи запечатываются при передаче и хранятся на сервере в конвертном шифровании — сервер хранит ключ расшифровки и может прочитать ваш ключ при ответе (НЕ нулевое разглашение; защита от дампа БД, а не от оператора сервера).',
+    en: 'Bring your own keys or use ours.',
+    ru: 'Свои ключи или наши.',
   },
   'guest.chat.lede': {
     en: 'A calm conversation with event-chain memory. It remembers what mattered, not just what you said.',
@@ -767,7 +783,7 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Пока ничего нет. Напишите в чат — и собеседник начнёт запоминать.',
   },
   'mem.empty.cta': { en: 'Go to chat', ru: 'Перейти в чат' },
-  'mem.recall': { en: 'Recall probe', ru: 'Проверка памяти' },
+  'mem.recall': { en: 'What the companion remembers', ru: 'Что помнит компаньон' },
   'mem.recall.ph': {
     en: 'What does the companion remember about…',
     ru: 'Что собеседник помнит о…',
@@ -779,12 +795,12 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   },
   'mem.role.user': { en: 'they said', ru: 'вы сказали' },
   'mem.role.assistant': { en: 'companion said', ru: 'собеседник ответил' },
-  'mem.salience': { en: 'salience', ru: 'значимость' },
+  'mem.salience': { en: 'importance', ru: 'значимость' },
   'mem.emo.title': {
     en: 'Emotional signal — auto-classified, may be imperfect',
     ru: 'Эмоциональный сигнал — автоклассификация, может ошибаться',
   },
-  'mem.chain': { en: 'Recalled chain', ru: 'Цепочка' },
+  'mem.chain': { en: 'Memory chain', ru: 'Цепочка памяти' },
   // Atomic memories (display layer over the event chain) — synthesized facts,
   // not raw chat messages. Themes are derived from the memories' own tags.
   'mem.themes': { en: 'Themes', ru: 'Темы' },
@@ -841,8 +857,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'mem.view.chains': { en: 'Chains', ru: 'Цепочки' },
   'mem.view.memories': { en: 'Memories', ru: 'Памяти' },
   'mem.view.shares': { en: 'Shares', ru: 'Шеры' },
-  'mem.h.linked': { en: 'Linked threads', ru: 'Связанные нити' },
-  'mem.h.atomic': { en: 'Atomic memories', ru: 'Атомарные памяти' },
+  'mem.h.linked': { en: 'Linked conversations', ru: 'Связанные разговоры' },
+  'mem.h.atomic': { en: 'Memories', ru: 'Воспоминания' },
   'mem.h.shares': { en: 'Outgoing shares', ru: 'Исходящие шеры' },
   'mem.danger.h': { en: 'Danger zone', ru: 'Опасная зона' },
   'mem.table.text': { en: 'Text', ru: 'Текст' },
@@ -863,9 +879,10 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   // Short tab labels for the landing header's 7-tab nav (OD app chrome). The
   // full nav.* equivalents are longer ("Routing & budget" / "Companions") which
   // overflows a horizontal tab strip; these mirror the OD labels verbatim.
-  'navtab.routing': { en: 'Routing', ru: 'Маршрутизация' },
+  'navtab.routing': { en: 'Providers & budget', ru: 'Провайдеры и бюджет' },
   'navtab.personas': { en: 'Personas', ru: 'Персонажи' },
   'navtab.menu': { en: 'Menu', ru: 'Меню' },
+  'navtab.more': { en: 'More', ru: 'Ещё' },
   'journal.title': { en: 'Journal', ru: 'Дневник' },
   'journal.sub': {
     en: 'A quiet page for what you’ve lived through',
@@ -1059,7 +1076,7 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'rt.s.hardstop': { en: 'cap reached', ru: 'лимит исчерпан' },
   'rt.budget.title': { en: 'Monthly budget', ru: 'Месячный бюджет' },
   'rt.budget.help': {
-    en: 'soft-warn at 80% · hard-stop at 100%',
+    en: 'warns at 80% · stops at 100%',
     ru: 'предупреждение на 80% · стоп на 100%',
   },
   'rt.budget.warn': { en: 'approaching cap', ru: 'близко к лимиту' },
@@ -1067,7 +1084,7 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     en: 'cap reached — serving locally',
     ru: 'лимит исчерпан — отвечает локально',
   },
-  'rt.fb': { en: 'Last fallback', ru: 'Последнее переключение' },
+  'rt.fb': { en: 'Last switch', ru: 'Последнее переключение' },
   'rt.fb.none': { en: 'none this session', ru: 'в этой сессии не было' },
   'rt.configure': { en: 'Configure keys →', ru: 'Настроить ключи →' },
   'rt.configure.hint': {
@@ -1095,33 +1112,40 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Где ходы обслуживаются. Конфигурация, не живой пинг.',
   },
   'rt.configchip': { en: 'config, not probing', ru: 'конфигурация, не пинг' },
-  'rt.chain.title': { en: 'Fallback chain', ru: 'Цепочка fallback' },
+  'rt.chain.title': { en: 'Provider order', ru: 'Порядок провайдеров' },
   'rt.chain.local': { en: 'Local fallback', ru: 'Локальный резерв' },
   'rt.chain.sub': {
     en: 'ordered · local fallback last',
     ru: 'по порядку · локальный резерв в конце',
   },
+  // Short note shown on the surface; the longer "how routing decides" detail
+  // (rt.chain.note) lives inside a collapsed <details> in RoutingScreen.
+  'rt.chain.note.short': {
+    en: 'Providers are tried in order; if one is unavailable, the next is used automatically.',
+    ru: 'Провайдеры пробуются по порядку; если один недоступен, автоматически используется следующий.',
+  },
+  'rt.chain.details': { en: 'How routing decides', ru: 'Как выбирается провайдер' },
   'rt.chain.note': {
-    en: 'BYOK wins even with env keys present; the matching env candidate is skipped (skip-self). On 429/5xx/timeout it falls through silently. Budget is checked first.',
-    ru: 'BYOK выигрывает даже при наличии env-ключей; подходящий по типу env-кандидат пропускается (skip-self). На 429/5xx/timeout — тихий переход. Бюджет проверяется первым.',
+    en: 'Your own key (BYOK) wins even when shared env keys are present; the matching env candidate is skipped. On 429/5xx/timeout it falls through silently. Budget is checked first.',
+    ru: 'Ваш ключ (BYOK) выигрывает даже при наличии общих env-ключей; подходящий по типу env-кандидат пропускается. На 429/5xx/timeout — тихий переход. Бюджет проверяется первым.',
   },
   'rt.chain.perturn': { en: 'per turn', ru: 'по ходу' },
-  'rt.budget.sub': { en: 'soft 80% · hard 100%', ru: 'soft 80% · hard 100%' },
+  'rt.budget.sub': { en: 'warns at 80% · stops at 100%', ru: 'предупреждение 80% · стоп 100%' },
   'rt.budget.oflimit': {
     en: 'of {limit} limit · {rem} remaining',
     ru: 'из лимита {limit} · осталось {rem}',
   },
-  'rt.budget.flag.warn': { en: 'soft-warn ≥80%', ru: 'soft-warn ≥80%' },
-  'rt.budget.flag.stop': { en: 'hard-stop ≥100%', ru: 'hard-stop ≥100%' },
+  'rt.budget.flag.warn': { en: 'warns at 80%', ru: 'предупреждение 80%' },
+  'rt.budget.flag.stop': { en: 'stops at 100%', ru: 'остановка 100%' },
   'rt.budget.note': {
-    en: 'soft-warn ≥80% — turn proceeds. hard-stop ≥100% — real providers are skipped, the local fallback serves the turn.',
-    ru: 'soft-warn ≥80% — ход идёт. hard-stop ≥100% — реальные провайдеры пропускаются, ход обслуживает локальный резерв.',
+    en: 'Warns at 80% — the turn proceeds. Stops at 100% — real providers are skipped and the local fallback serves the turn.',
+    ru: 'Предупреждение на 80% — ход идёт. Остановка на 100% — реальные провайдеры пропускаются, ход обслуживает локальный резерв.',
   },
   'rt.providers.title': { en: 'Providers', ru: 'Провайдеры' },
   'rt.providers.sub': { en: 'config-derived health', ru: 'здоровье из конфига' },
-  'rt.lastfb.title': { en: 'Last fallback', ru: 'Последний fallback' },
-  'rt.lastfb.sub': { en: 'process-local', ru: 'process-local' },
-  'rt.lastfb.lost': { en: 'lost on restart', ru: 'теряется на рестарте' },
+  'rt.lastfb.title': { en: 'Last switch', ru: 'Последнее переключение' },
+  'rt.lastfb.sub': { en: 'this session only', ru: 'только в этой сессии' },
+  'rt.lastfb.lost': { en: 'cleared on restart', ru: 'сбрасывается при рестарте' },
   'rt.footnote': {
     en: 'health is configuration-derived, not live probing · configured=healthy · ollama-without-url=standby · removed-with-prior-usage=unavailable',
     ru: 'здоровье — конфигурация, не живой пинг · configured=healthy · ollama-without-url=standby · removed-with-prior-usage=unavailable',
@@ -1362,8 +1386,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Ваши диалоги остаются приватными.',
   },
   'pl.note.s': {
-    en: 'On every plan, your messages are encrypted at rest. BYOK users: the server only ever sees an encrypted key handle. Subscribers: we process requests to route them, but never train on your conversations and never sell data. Cancel anytime — your memory export is yours to keep.',
-    ru: 'На любом тарифе сообщения шифруются при хранении. Со своими ключами: сервер видит только зашифрованный дескриптор ключа. С подпиской: мы обрабатываем запросы, чтобы их маршрутизировать, но не обучаемся на ваших диалогах и не продаём данные. Отменить можно в любой момент — экспорт памяти остаётся у вас.',
+    en: 'On every plan, your messages are encrypted at rest. We never train on your conversations and never sell data. Cancel anytime — your memory export is yours to keep. How keys are stored is documented in SECURITY.md.',
+    ru: 'На любом тарифе сообщения шифруются при хранении. Мы не обучаемся на ваших диалогах и не продаём данные. Отменить можно в любой момент — экспорт памяти остаётся у вас. Хранение ключей описано в SECURITY.md.',
   },
   'pl.free.cta': { en: 'You’re here', ru: 'Вы здесь' },
   'pl.plus.cta': { en: 'Choose Plus', ru: 'Выбрать Plus' },
@@ -1397,8 +1421,12 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Ключей пока не подключено.',
   },
   'set.vault.hint': {
-    en: 'Keys are sealed in transit (ECDH to the server session key) and stored envelope-encrypted on the server. The server holds the decryption key and can read your key at reply time — NOT zero-knowledge; protects against a database dump, not the server operator. Keys survive a browser-data wipe and work across your devices.',
-    ru: 'Ключи запечатываются при передаче (ECDH на сессионный ключ сервера) и хранятся на сервере в конвертном шифровании. Сервер хранит ключ расшифровки и может прочитать ваш ключ при ответе — НЕ нулевое разглашение; защита от дампа БД, а не от оператора сервера. Ключи переживут очистку данных браузера и работают на всех ваших устройствах.',
+    en: 'Your API keys are encrypted in transit and at rest on the server.',
+    ru: 'Ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере.',
+  },
+  'set.vault.docs': {
+    en: 'How are keys stored? See SECURITY.md →',
+    ru: 'Как хранятся ключи? См. SECURITY.md →',
   },
   // Multi-key BYOK (replaces the single-key empty state with a real action).
   'set.vault.add_key': { en: 'Add a key', ru: 'Добавить ключ' },
@@ -1441,8 +1469,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Использовать мой личный ключ',
   },
   'fam.key.use_personal.help': {
-    en: 'Your active personal LLM key serves every family member’s chat. It is decrypted in memory only for each reply and zeroized after — members never see the key. Mutually exclusive with family keys.',
-    ru: 'Ваш активный личный ключ LLM обслуживает чат всех членов семьи. Он расшифровывается в памяти только для ответа и затем обнуляется — члены семьи никогда не видят ключ. Взаимоисключающе с семейными ключами.',
+    en: 'Your active personal key serves every family member’s chat. Mutually exclusive with family keys. How keys are stored is documented in SECURITY.md.',
+    ru: 'Ваш активный личный ключ обслуживает чат всех членов семьи. Взаимоисключающе с семейными ключами. Хранение ключей описано в SECURITY.md.',
   },
   'fam.key.use_personal.no_personal_key': {
     en: 'You have no personal LLM key yet. Add one in /onboarding first.',

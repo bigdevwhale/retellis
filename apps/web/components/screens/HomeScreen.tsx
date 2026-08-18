@@ -11,17 +11,25 @@ import Link from 'next/link';
 // here. The auth-aware TopBar is rendered by the page/layout, not here.
 //
 // CTA routing:
-//  - hero "Start — free" + closing "Start — free" → /onboarding
+//  - hero "Start — free" + closing "Start — free" → /chat on hosted (lazy onboarding:
+//    chat first, keys later from Settings), /onboarding on self-hosted (BYOK-first).
 //  - hero "See plans" → /plans when billing is on, else the in-page #pricing anchor
 //  - pricing Free → /onboarding; Plus/Pro → /plans (hidden on billing-off / self-hosted,
 //    which surfaces landing.pricing.note instead)
+//  - section 5 "Under the hood" (tech depth) is self-hosted only — hosted hides it so a
+//    first-time visitor isn't met with the routing/BYOK engineering surface.
 
-const FLOWLINE = ['persona block injected', 'salient chains', 'recent window', 'msg'];
+const FLOWLINE = [
+  'landing.flowline.persona',
+  'landing.flowline.chains',
+  'landing.flowline.window',
+  'landing.flowline.msg',
+];
 const CHAIN_CHIPS = [
-  { label: 'BYOK ключ', on: true },
-  { label: 'env', on: false },
-  { label: 'ollama', on: false },
-  { label: 'local fallback', on: false, dim: true },
+  { labelKey: 'landing.chainchip.byok', on: true },
+  { labelKey: 'landing.chainchip.env', on: false },
+  { labelKey: 'landing.chainchip.ollama', on: false },
+  { labelKey: 'landing.chainchip.fallback', on: false, dim: true },
 ];
 const PROVIDERS = [
   { name: 'OpenAI', model: 'gpt-5-mini', reqs: '12', tokens: '18,402', cost: '$0.041', dot: 'on' },
@@ -95,7 +103,7 @@ export function HomeScreen() {
             <h1>{t('landing.hero.h1')}</h1>
             <p className="sub">{t('landing.hero.sub')}</p>
             <div className="hero-cta">
-              <Link className="btn btn--primary" href="/onboarding">
+              <Link className="btn btn--primary" href={billing ? '/chat' : '/onboarding'}>
                 {t('landing.hero.cta.start')}
               </Link>
               {plansCta}
@@ -139,7 +147,7 @@ export function HomeScreen() {
           <div className="flowline">
             {FLOWLINE.map((s, i) => (
               <span key={s} className="flowline__grp">
-                <span className="step">{s}</span>
+                <span className="step">{t(s)}</span>
                 {i < FLOWLINE.length - 1 && <span className="arr">→</span>}
               </span>
             ))}
@@ -230,7 +238,6 @@ export function HomeScreen() {
                     <span className="m">sk-••••••••</span>
                     <span className="t">3a2f</span>
                   </span>
-                  <span className="ecdh">ECDH seal</span>
                 </div>
               </div>
               <h3>{t('landing.why.a2.h3')}</h3>
@@ -331,123 +338,124 @@ export function HomeScreen() {
         </div>
       </section>
 
-      {/* ============ 5. TECH DEPTH ============ */}
-      <section className="section tech">
-        <div className="wrap">
-          <p className="eyebrow">{t('landing.tech.eyebrow')}</p>
-          <h2>{t('landing.tech.h2')}</h2>
+      {/* ============ 5. TECH DEPTH (self-hosted only — hosted hides this section) ============ */}
+      {!billing && (
+        <section className="section tech">
+          <div className="wrap">
+            <p className="eyebrow">{t('landing.tech.eyebrow')}</p>
+            <h2>{t('landing.tech.h2')}</h2>
 
-          <div className="tech__grid">
-            <div className="panel">
-              <div className="panel__head">
-                <span className="t">{t('landing.tech.chain.title')}</span>
-                <span className="sub">ordered · local fallback last</span>
-              </div>
-              <div className="panel__body">
-                <div className="chain-dense">
-                  {CHAIN_CHIPS.map((c, i) => (
-                    <span key={c.label} className="flowline__grp">
-                      <span
-                        className={`chip${c.on ? ' chip--on' : ''}${c.dim ? ' chip--dim' : ''}`}
-                      >
-                        {c.label}
-                      </span>
-                      {i < CHAIN_CHIPS.length - 1 && <span className="conn" />}
-                    </span>
-                  ))}
+            <div className="tech__grid">
+              <div className="panel">
+                <div className="panel__head">
+                  <span className="t">{t('landing.tech.chain.title')}</span>
+                  <span className="sub">ordered · local fallback last</span>
                 </div>
-                <p className="chain-note">{t('landing.tech.chain.note')}</p>
-
-                <table className="providers">
-                  <thead>
-                    <tr>
-                      <th>{t('landing.tech.table.provider')}</th>
-                      <th>Model</th>
-                      <th className="num">reqs</th>
-                      <th className="num">tokens</th>
-                      <th className="num">cost</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PROVIDERS.map((p) => (
-                      <tr key={p.name}>
-                        <td>
-                          <span className="prov">
-                            <span className={`dot${p.dot === 'on' ? '' : ` ${p.dot}`}`} />
-                            {p.name}
-                          </span>
-                        </td>
-                        <td className="mono">{p.model}</td>
-                        <td className="num">{p.reqs}</td>
-                        <td className="num">{p.tokens}</td>
-                        <td className="num">{p.cost}</td>
-                      </tr>
+                <div className="panel__body">
+                  <div className="chain-dense">
+                    {CHAIN_CHIPS.map((c, i) => (
+                      <span key={c.labelKey} className="flowline__grp">
+                        <span
+                          className={`chip${c.on ? ' chip--on' : ''}${c.dim ? ' chip--dim' : ''}`}
+                        >
+                          {t(c.labelKey)}
+                        </span>
+                        {i < CHAIN_CHIPS.length - 1 && <span className="conn" />}
+                      </span>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  </div>
+                  <p className="chain-note">{t('landing.tech.chain.note')}</p>
 
-            <div className="panel">
-              <div className="panel__head">
-                <span className="t">{t('landing.tech.budget.title')}</span>
-                <span className="sub">soft 80% · hard 100%</span>
+                  <table className="providers">
+                    <thead>
+                      <tr>
+                        <th>{t('landing.tech.table.provider')}</th>
+                        <th>{t('landing.tech.table.model')}</th>
+                        <th className="num">{t('landing.tech.table.reqs')}</th>
+                        <th className="num">{t('landing.tech.table.tokens')}</th>
+                        <th className="num">{t('landing.tech.table.cost')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {PROVIDERS.map((p) => (
+                        <tr key={p.name}>
+                          <td>
+                            <span className="prov">
+                              <span className={`dot${p.dot === 'on' ? '' : ` ${p.dot}`}`} />
+                              {p.name}
+                            </span>
+                          </td>
+                          <td className="mono">{p.model}</td>
+                          <td className="num">{p.reqs}</td>
+                          <td className="num">{p.tokens}</td>
+                          <td className="num">{p.cost}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-              <div className="panel__body">
-                <div className="budget">
-                  <svg viewBox="0 0 120 120" aria-hidden="true">
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="var(--border)"
-                      strokeWidth="10"
-                    />
-                    <circle
-                      cx="60"
-                      cy="60"
-                      r="50"
-                      fill="none"
-                      stroke="var(--purple)"
-                      strokeWidth="10"
-                      strokeLinecap="round"
-                      strokeDasharray="201 314"
-                      transform="rotate(-90 60 60)"
-                    />
-                    <text
-                      x="60"
-                      y="64"
-                      textAnchor="middle"
-                      fontFamily="var(--sans)"
-                      fontSize="22"
-                      fill="var(--heading)"
-                      fontWeight="300"
-                    >
-                      64%
-                    </text>
-                  </svg>
-                  <div className="meta">
-                    <span className="pct tnum">$0.41</span>
-                    <span className="lbl">{t('landing.tech.budget.lbl')}</span>
-                    <div className="flags">
-                      <span className="flag">soft 80%</span>
-                      <span className="flag flag--warn">warn</span>
-                      <span className="flag flag--stop">hard-stop</span>
+
+              <div className="panel">
+                <div className="panel__head">
+                  <span className="t">{t('landing.tech.budget.title')}</span>
+                  <span className="sub">soft 80% · hard 100%</span>
+                </div>
+                <div className="panel__body">
+                  <div className="budget">
+                    <svg viewBox="0 0 120 120" aria-hidden="true">
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        fill="none"
+                        stroke="var(--border)"
+                        strokeWidth="10"
+                      />
+                      <circle
+                        cx="60"
+                        cy="60"
+                        r="50"
+                        fill="none"
+                        stroke="var(--purple)"
+                        strokeWidth="10"
+                        strokeLinecap="round"
+                        strokeDasharray="201 314"
+                        transform="rotate(-90 60 60)"
+                      />
+                      <text
+                        x="60"
+                        y="64"
+                        textAnchor="middle"
+                        fontFamily="var(--sans)"
+                        fontSize="22"
+                        fill="var(--heading)"
+                        fontWeight="300"
+                      >
+                        64%
+                      </text>
+                    </svg>
+                    <div className="meta">
+                      <span className="pct tnum">$0.41</span>
+                      <span className="lbl">{t('landing.tech.budget.lbl')}</span>
+                      <div className="flags">
+                        <span className="flag">soft 80%</span>
+                        <span className="flag flag--warn">warn</span>
+                        <span className="flag flag--stop">hard-stop</span>
+                      </div>
                     </div>
                   </div>
+                  <p className="chain-note">{t('landing.tech.budget.note')}</p>
                 </div>
-                <p className="chain-note">{t('landing.tech.budget.note')}</p>
               </div>
             </div>
-          </div>
 
-          <div className="tech__foot">
-            <code>ECDH seal → server session pubkey → envelope-encrypted at rest</code>
-            <code>{t('landing.tech.foot3')}</code>
+            <div className="tech__foot">
+              <code>{t('landing.tech.foot3')}</code>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ============ 6. PRICING ============ */}
       <section className="section" id="pricing">
@@ -537,7 +545,7 @@ export function HomeScreen() {
       {/* ============ 8. CLOSING ============ */}
       <section className="closing wrap">
         <h2>{t('landing.closing.h2')}</h2>
-        <Link className="btn btn--primary" href="/onboarding">
+        <Link className="btn btn--primary" href={billing ? '/chat' : '/onboarding'}>
           {t('landing.hero.cta.start')}
         </Link>
       </section>

@@ -108,6 +108,26 @@ function FamilyPrimaryScreen({
     [router, searchParams],
   );
 
+  // One-shot `?flash=family_created` banner — shown after createFamily
+  // redirects to /family?tab=members&flash=family_created. Lives here (not in
+  // FamilySettingsTabs) so it renders on the Members tab, which is where the
+  // redirect lands. The banner links to the Family key sub-tab for when the
+  // owner is ready to add a key.
+  const familyFlash =
+    searchParams.get('flash') === 'family_created'
+      ? L2({
+          en: 'Family created. Invite members, then add a family key when you’re ready.',
+          ru: 'Семья создана. Пригласите участников, затем добавьте семейный ключ, когда будете готовы.',
+        })
+      : null;
+  useEffect(() => {
+    if (!searchParams.get('flash')) return;
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.delete('flash');
+    const qs = sp.toString();
+    router.replace(qs ? `/family?${qs}` : '/family');
+  }, [searchParams, router]);
+
   const refresh = useCallback(async () => {
     try {
       const [state, invites, providers, _therapistPrompt] = await Promise.all([
@@ -166,12 +186,12 @@ function FamilyPrimaryScreen({
       setFamily(f);
       setName('');
       setCreating(false);
-      // Phase 2 #7: land a freshly-minted owner on the Settings → Family
-      // key sub-tab with a one-shot "key ready" flash, so the very next
-      // step (seal the family LLM key) is in front of them — not the
-      // Members tab where the key form is buried behind two tab clicks.
-      // The flash is consumed by FamilySettingsTabs.
-      router.replace('/family?tab=settings&subtab=key&flash=vault_ready');
+      // Phase 2 #7: land a freshly-minted owner on Members with a one-shot
+      // "family created" flash — they invite members first, then add a family
+      // key when they're ready (the flash links to the key sub-tab). We no
+      // longer funnel straight into the key form before the owner has chatted
+      // or invited anyone. The flash is consumed by FamilySettingsTabs.
+      router.replace('/family?tab=members&flash=family_created');
     } catch (e) {
       setNameErr((e as Error).message);
     } finally {
@@ -265,8 +285,8 @@ function FamilyPrimaryScreen({
             <hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '20px 0' }} />
             <div className="help">
               {L2({
-                en: 'Each user is in at most one family. The family API key is sealed in transit and stored envelope-encrypted on the server — the server holds the decryption key and can read it at reply time (NOT zero-knowledge; protects against a database dump, not the server operator). The companion is not a licensed family therapist.',
-                ru: 'Каждый пользователь в одной семье. Семейный ключ API запечатывается при передаче и хранится на сервере в конвертном шифровании — сервер хранит ключ расшифровки и может прочитать ваш ключ при ответе (НЕ нулевое разглашение; защищает от дампа БД, а не от оператора сервера). Компаньон — не лицензированный семейный терапевт.',
+                en: 'Each user is in at most one family. The family API key is encrypted in transit and at rest on the server — see SECURITY.md for how keys are stored. The companion is not a licensed family therapist.',
+                ru: 'Каждый пользователь в одной семье. Семейный ключ API шифруется при передаче и хранится зашифрованным на сервере — подробности о хранении ключей в SECURITY.md. Компаньон — не лицензированный семейный терапевт.',
               })}
             </div>
           </div>
@@ -338,6 +358,20 @@ function FamilyPrimaryScreen({
             </button>
           ))}
         </div>
+
+        {familyFlash && (
+          <output className="card fam-flash" style={{ marginBottom: 16 }}>
+            <span className="dot" aria-hidden="true" />
+            <span className="fam-flash-msg">{familyFlash}</span>
+            <Link
+              className="btn btn-sm"
+              href="/family?tab=settings&subtab=key"
+              style={{ marginLeft: 'auto' }}
+            >
+              {L2({ en: 'Add family key →', ru: 'Добавить семейный ключ →' })}
+            </Link>
+          </output>
+        )}
 
         {topTab === 'members' && (
           <>

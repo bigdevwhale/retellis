@@ -393,15 +393,15 @@ describe('FamilySettingsScreen — top-level tab strip on /family', () => {
     expect(container!.textContent ?? '').toMatch(/Using the owner.s personal key/i);
   });
 
-  it('?flash=vault_ready renders the flash on the active tab', async () => {
-    // The post-create redirect lands on the Family key tab with a one-shot
-    // flash telling the owner to add the family's LLM API key.
-    mockSearchParams = new URLSearchParams('tab=settings&subtab=key&flash=vault_ready');
+  it('?flash=family_created renders the flash on the active tab', async () => {
+    // The post-create redirect lands on Members with a one-shot flash telling
+    // the owner to invite members, then add a family key when ready.
+    mockSearchParams = new URLSearchParams('tab=members&flash=family_created');
     await mountAndSettle();
 
     // The flash banner is rendered.
     const flash = container!.querySelector('output');
-    expect(flash?.textContent ?? '').toMatch(/Family created|Add the family.s LLM API key/i);
+    expect(flash?.textContent ?? '').toMatch(/Family created|Invite members/i);
   });
 
   it('clicking a different top-level tab clears a stale ?subtab=', async () => {

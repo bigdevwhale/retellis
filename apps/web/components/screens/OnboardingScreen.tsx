@@ -171,13 +171,14 @@ export function OnboardingScreen() {
       setRemoteProviders((prev) => [...prev.filter((p) => p.id !== rec.id), rec]);
       setConnected(true);
     } catch (err) {
-      // Surface the real cause — the generic message hides network vs server
-      // validation failures. Log it and show the underlying message if we
-      // have one.
+      // Show only the localized message — the server already redacts key
+      // material, but raw server text can still leak validation internals or
+      // provider echoes, so we don't surface `err.message` to the UI. The full
+      // error is logged for diagnostics.
       const detail = err instanceof Error ? err.message : String(err);
       // eslint-disable-next-line no-console
-      console.error('[onboarding] connect failed:', detail);
-      setError(`${t('onb.connect.fail')} (${detail})`);
+      console.warn('[onboarding] connect failed:', detail);
+      setError(t('onb.connect.fail'));
     } finally {
       setBusy(false);
     }
