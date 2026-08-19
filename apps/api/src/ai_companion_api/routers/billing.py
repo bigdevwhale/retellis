@@ -16,6 +16,7 @@ Webhook routes are unauthenticated in ``AuthMiddleware`` (in ``_PUBLIC_POST``)
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any
@@ -32,6 +33,7 @@ from ai_companion_contracts import (
 )
 from fastapi import APIRouter, Depends, HTTPException, Request
 
+from ..billing.monitoring import check_webhook_health, get_webhook_metrics
 from ..billing.providers import (
     PaddleEvent,
     ProdamusEvent,
@@ -52,6 +54,7 @@ from ..billing.providers import (
     yukassa_fetch_receipt,
     yukassa_parse_notification,
 )
+from ..billing.reconciliation import run_reconciliation
 from ..billing.store import BillingStore, InvoiceRecord
 from ..config import Settings
 from ..deps import get_billing_store, get_current_principal, get_settings
@@ -254,23 +257,42 @@ async def paddle_webhook(
     route), then process idempotently. Returns 200 to Paddle on success OR on
     a bad signature (401) so a malformed retry doesn't loop — Paddle treats
     non-2xx as retry, and we don't want to retry a bad-signature payload."""
+    metrics = get_webhook_metrics()
+    start_time = time.time()
+    metrics.record_received("paddle")
+
     raw = await request.body()
     sig = request.headers.get("Paddle-Signature") or ""
     if not paddle_verify_signature(raw, sig, settings.paddle_webhook_secret):
+        metrics.record_failed("paddle", "signature verification failed")
         logger.warning("paddle webhook signature verification failed")
         raise HTTPException(status_code=401, detail="invalid signature")
     try:
         payload: dict[str, Any] = await request.json()
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        metrics.record_failed("paddle", f"invalid payload: {e}")
         raise HTTPException(status_code=400, detail="invalid payload") from None
+
     event = paddle_parse_event(payload)
     if not event.event_id:
         return BillingWebhookAck(ok=True)  # nothing to act on; ack so Paddle stops retrying
+
     # Idempotency: a redelivery of an already-processed event is a bare ack.
     if not await store.mark_webhook_processed(provider="paddle", event_id=event.event_id):
+        metrics.record_idempotent_skip("paddle")
         return BillingWebhookAck(ok=True)
-    auth_store = request.app.state.auth_store
-    await apply_paddle_event(event, store=store, auth_store=auth_store)
+
+    try:
+        auth_store = request.app.state.auth_store
+        await apply_paddle_event(event, store=store, auth_store=auth_store)
+        latency_ms = (time.time() - start_time) * 1000
+        metrics.record_processed("paddle", latency_ms)
+    except Exception as e:
+        metrics.record_failed("paddle", f"processing error: {e}")
+        logger.exception("paddle webhook processing failed")
+        # Still return 200 to avoid retries, but log the failure
+        raise
+
     return BillingWebhookAck(ok=True)
 
 
@@ -283,28 +305,36 @@ async def yookassa_webhook(
     """ЮKassa notification. The notification body is NOT trusted alone — we
     re-fetch the payment from the ЮKassa API (HTTP Basic) and act on the
     authoritative status. Optional shared-secret check on the query string."""
+    metrics = get_webhook_metrics()
+    start_time = time.time()
+    metrics.record_received("yookassa")
+
     # Optional shared-secret: ЮKassa can be configured to POST to
     # ``/v1/billing/webhook/yookassa?secret=...``; if the secret is set in
     # config, require it to match. Skip when unset (operator didn't opt in).
     if settings.yukassa_webhook_secret:
         qs = request.query_params.get("secret") or ""
         if qs != settings.yukassa_webhook_secret:
+            metrics.record_failed("yookassa", "shared-secret mismatch")
             logger.warning("yookassa webhook shared-secret mismatch")
             raise HTTPException(status_code=401, detail="invalid secret")
     try:
         payload: dict[str, Any] = await request.json()
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        metrics.record_failed("yookassa", f"invalid payload: {e}")
         raise HTTPException(status_code=400, detail="invalid payload") from None
     pre = yukassa_parse_notification(payload)
     if pre is None:
         return BillingWebhookAck(ok=True)  # event type we don't handle
     # Idempotency keyed on ``{payment_id}:{event}``.
     if not await store.mark_webhook_processed(provider="yookassa", event_id=pre.event_id):
+        metrics.record_idempotent_skip("yookassa")
         return BillingWebhookAck(ok=True)
     # Re-fetch the authoritative payment state. A fetch failure → skip (200),
     # never grant credits on an unverified payment.
     payment = await yukassa_fetch_payment(pre.payment_id, settings)
     if payment is None:
+        metrics.record_failed("yookassa", f"payment re-fetch failed: {pre.payment_id}")
         logger.warning("yookassa webhook: payment re-fetch failed for %s", pre.payment_id)
         return BillingWebhookAck(ok=True)
     # Best-effort 54-ФЗ receipt fetch: the payment object only carries
@@ -314,8 +344,15 @@ async def yookassa_webhook(
     receipt = await yukassa_fetch_receipt(pre.payment_id, settings)
     fiscal_id = fiscal_id_from_receipt(receipt)
     event = yukassa_event_from_payment(payment, pre.event_type, fiscal_receipt_id=fiscal_id)
-    auth_store = request.app.state.auth_store
-    await apply_yookassa_event(event, store=store, auth_store=auth_store)
+    try:
+        auth_store = request.app.state.auth_store
+        await apply_yookassa_event(event, store=store, auth_store=auth_store)
+        latency_ms = (time.time() - start_time) * 1000
+        metrics.record_processed("yookassa", latency_ms)
+    except Exception as e:
+        metrics.record_failed("yookassa", f"processing error: {e}")
+        logger.exception("yookassa webhook processing failed")
+        raise
     return BillingWebhookAck(ok=True)
 
 
@@ -332,23 +369,38 @@ async def prodamus_webhook(
     Prodamus's internal ``order_id``. Returns 200 on success OR on a bad
     signature (401) so a malformed retry doesn't loop — Prodamus treats non-2xx
     as retry and we don't want to retry a bad-signature payload."""
+    metrics = get_webhook_metrics()
+    start_time = time.time()
+    metrics.record_received("prodamus")
+
     try:
         payload: dict[str, Any] = await request.json()
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        metrics.record_failed("prodamus", f"invalid payload: {e}")
         raise HTTPException(status_code=400, detail="invalid payload") from None
     if not isinstance(payload, dict):
+        metrics.record_failed("prodamus", "payload is not a dict")
         raise HTTPException(status_code=400, detail="invalid payload")
     sign = request.headers.get("Sign") or ""
     if not prodamus_verify_signature(payload, sign, settings.prodamus_secret_key):
+        metrics.record_failed("prodamus", "signature verification failed")
         logger.warning("prodamus webhook signature verification failed")
         raise HTTPException(status_code=401, detail="invalid signature")
     event = prodamus_parse_event(payload)
     if not event.event_id or not event.order_num:
         return BillingWebhookAck(ok=True)  # nothing to act on; ack so Prodamus stops
     if not await store.mark_webhook_processed(provider="prodamus", event_id=event.event_id):
+        metrics.record_idempotent_skip("prodamus")
         return BillingWebhookAck(ok=True)
-    auth_store = request.app.state.auth_store
-    await apply_prodamus_event(event, store=store, auth_store=auth_store)
+    try:
+        auth_store = request.app.state.auth_store
+        await apply_prodamus_event(event, store=store, auth_store=auth_store)
+        latency_ms = (time.time() - start_time) * 1000
+        metrics.record_processed("prodamus", latency_ms)
+    except Exception as e:
+        metrics.record_failed("prodamus", f"processing error: {e}")
+        logger.exception("prodamus webhook processing failed")
+        raise
     return BillingWebhookAck(ok=True)
 
 
@@ -696,6 +748,65 @@ def _return_url(settings: Settings, request: Request) -> str:
     back to the request's base URL. Trailing slash stripped."""
     origin = (settings.billing_return_origin or str(request.base_url)).rstrip("/")
     return f"{origin}/plans?checkout=done"
+
+
+# --- Webhook health monitoring -----------------------------------------
+
+
+@router.get("/billing/health")
+async def billing_health(settings: SettingsDep) -> dict[str, Any]:
+    """Health check for billing webhook processing.
+
+    Returns success/failure rates, recent errors, and overall health status
+    for all billing providers. Useful for operational monitoring and alerting.
+    """
+    if not settings.feature_billing or not settings.is_hosted:
+        return {
+            "billing_enabled": False,
+            "reason": "Billing is only available in hosted mode with FEATURE_BILLING=1",
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+
+    return check_webhook_health()
+
+
+@router.get("/billing/metrics")
+async def billing_metrics(
+    _principal: PrincipalDep,
+    settings: SettingsDep,
+) -> dict[str, Any]:
+    """Detailed webhook metrics for all billing providers.
+
+    Returns per-provider statistics including received/processed/failed counts,
+    success rates, average latency, and recent errors. Requires an authenticated
+    principal for security (sensitive operational data).
+    """
+    if not settings.feature_billing or not settings.is_hosted:
+        raise HTTPException(status_code=403, detail="Billing metrics not available")
+
+    metrics = get_webhook_metrics()
+    return metrics.get_all_stats()
+
+
+@router.post("/billing/reconcile")
+async def billing_reconcile(
+    _principal: PrincipalDep,
+    settings: SettingsDep,
+    store: BillingStoreDep,
+) -> dict[str, Any]:
+    """Manually trigger a billing reconciliation pass.
+
+    Compares local subscription state against payment history to surface drift
+    (stale active subs, stuck past_due, orphaned credits). Returns a summary
+    report. Requires an authenticated principal. Intended to be run on a
+    schedule (e.g. daily via cron/apscheduler) but exposed as an endpoint for
+    manual operator triggers.
+    """
+    if not settings.feature_billing or not settings.is_hosted:
+        raise HTTPException(status_code=403, detail="Billing reconciliation not available")
+
+    report = await run_reconciliation(store)
+    return report.summary()
 
 
 __all__ = ["apply_paddle_event", "apply_prodamus_event", "apply_yookassa_event", "router"]

@@ -50,6 +50,11 @@ _PUBLIC_GET: frozenset[str] = frozenset(
         # prices/credits before signing in. Checkout/portal/subscription still
         # require a Principal; the webhooks are public POST (signature-gated).
         "/v1/billing/plans",
+        # Webhook processing health — public so external monitoring (uptime
+        # checks, alerting) can probe it without a session. Exposes only
+        # aggregate success/failure rates, no PII or key material. The detailed
+        # /v1/billing/metrics endpoint still requires a Principal.
+        "/v1/billing/health",
         # Family invite landing — the GET page must render unauthed so an
         # invitee lands on login/signup with the sealed token in the URL. The
         # POST /v1/family/accept still requires a Principal (authed redemption).

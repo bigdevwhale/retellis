@@ -142,6 +142,8 @@ class BillingStore(Protocol):
         self, *, provider: str, provider_sub_id: str
     ) -> Subscription | None: ...
     async def upsert_subscription(self, sub: Subscription) -> Subscription: ...
+    async def list_all_subscriptions(self) -> list[Subscription]: ...
+    async def last_payment_for(self, user_id: str) -> datetime | None: ...
     async def list_invoices(self, *, user_id: str) -> list[InvoiceRecord]: ...
     async def insert_invoice(self, inv: InvoiceRecord) -> InvoiceRecord: ...
     async def mark_webhook_processed(self, *, provider: str, event_id: str) -> bool: ...
@@ -239,6 +241,15 @@ class InMemoryBillingStore:
         if sub.provider_sub_id is not None:
             self._subs_by_provider[(sub.provider, sub.provider_sub_id)] = sub
         return sub
+
+    async def list_all_subscriptions(self) -> list[Subscription]:
+        return list(self._subs_by_id.values())
+
+    async def last_payment_for(self, user_id: str) -> datetime | None:
+        user_invoices = [i for i in self._invoices if i.user_id == user_id and i.paid_at]
+        if not user_invoices:
+            return None
+        return max(i.paid_at for i in user_invoices if i.paid_at)
 
     async def list_invoices(self, *, user_id: str) -> list[InvoiceRecord]:
         return [i for i in self._invoices if i.user_id == user_id]
@@ -407,6 +418,30 @@ class PostgresBillingStore:
             row.updated_at = _utcnow()
             await s.commit()
             return _row_to_subscription(row)
+
+    async def list_all_subscriptions(self) -> list[Subscription]:
+        from sqlalchemy import select
+
+        from ..db.models import Subscription as SubscriptionModel
+
+        async with await self._session() as s:
+            r = await s.execute(select(SubscriptionModel))
+            return [_row_to_subscription(row) for row in r.scalars().all()]
+
+    async def last_payment_for(self, user_id: str) -> datetime | None:
+        from sqlalchemy import select
+
+        from ..db.models import Invoice as InvoiceModel
+
+        async with await self._session() as s:
+            r = await s.execute(
+                select(InvoiceModel.paid_at)
+                .where(InvoiceModel.user_id == user_id, InvoiceModel.paid_at.is_not(None))
+                .order_by(InvoiceModel.paid_at.desc())
+                .limit(1)
+            )
+            row = r.scalar_one_or_none()
+            return row
 
     async def list_invoices(self, *, user_id: str) -> list[InvoiceRecord]:
         from sqlalchemy import select
