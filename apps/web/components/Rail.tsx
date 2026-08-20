@@ -168,10 +168,10 @@ export function Rail() {
   return (
     <aside className="rail">
       <div className="rail-top">
-        <Link className="brand-btn" href="/" aria-label="Stillside home">
+        <Link className="brand-btn" href="/" aria-label="Retellis home">
           <div className="mark">◐</div>
           <div className="brand-text">
-            <b>Stillside</b>
+            <b>Retellis</b>
             <span>{t('brand.tag')}</span>
           </div>
         </Link>

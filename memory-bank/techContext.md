@@ -1,4 +1,4 @@
-# Tech Context — Stillside
+# Tech Context — Retellis
 
 ## Stack & versions
 

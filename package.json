@@ -2,7 +2,7 @@
   "name": "ai-companion",
   "version": "0.1.0",
   "private": true,
-  "description": "Stillside — open-source AI companion PWA with BYOK swappable LLM keys.",
+  "description": "Retellis — open-source AI companion PWA with BYOK swappable LLM keys.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.33.2",
   "engines": {

@@ -130,7 +130,7 @@ function entryDateLabel(iso: string, locale: string): string {
 // or accidental close doesn't lose a half-written page. Restored only when the
 // writer opens fresh (no seed, no prompt, no edit). Cleared on save. This is a
 // client convenience — the server never sees the draft.
-const DRAFT_KEY = 'stillside.journal.draft';
+const DRAFT_KEY = 'retellis.journal.draft';
 
 function loadDraft(): Draft | null {
   try {

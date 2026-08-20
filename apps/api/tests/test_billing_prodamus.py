@@ -34,7 +34,7 @@ _SECRET = "prodamus_live_test_secret_value_0123456789"
 _SETTINGS_KW = dict(
     prodamus_secret_key=_SECRET,
     prodamus_payform_url="https://demo.payform.ru",
-    prodamus_sys="stillside",
+    prodamus_sys="retellis",
     billing_return_origin="https://app.example.com",
 )
 
@@ -48,11 +48,11 @@ def _plan():
 def _submit(**over) -> dict:
     base = {
         "order_id": "pro_internal_1",
-        "order_num": "stillside:u-1:plus_ww:deadbeef",
+        "order_num": "retellis:u-1:plus_ww:deadbeef",
         "payment_status": "success",
         "sum": "12.00",
         "currency": "usd",
-        "products": [{"name": "Stillside Plus (plus_ww)", "price": "12.00", "quantity": "1"}],
+        "products": [{"name": "Retellis Plus (plus_ww)", "price": "12.00", "quantity": "1"}],
     }
     base.update(over)
     return base
@@ -125,7 +125,7 @@ def test_parse_success_reads_linkage_from_order_num():
     ev = prodamus_parse_event(
         {
             "order_id": "pro_1",
-            "order_num": "stillside:u-1:plus_ww:deadbeef",
+            "order_num": "retellis:u-1:plus_ww:deadbeef",
             "payment_status": "success",
         }
     )
@@ -140,7 +140,7 @@ def test_parse_canceled_status():
     ev = prodamus_parse_event(
         {
             "order_id": "pro_2",
-            "order_num": "stillside:u-1:plus_ww:abc",
+            "order_num": "retellis:u-1:plus_ww:abc",
             "payment_status": "order_canceled",
         }
     )
@@ -177,17 +177,17 @@ async def test_checkout_builds_signed_link_and_extracts_url():
     assert captured["url"] == "https://demo.payform.ru"
     f = captured["flat"]
     assert f["do"] == "link"
-    assert f["sys"] == "stillside"
+    assert f["sys"] == "retellis"
     assert f["callbackType"] == "json"  # webhook comes as JSON with `submit`
     assert f["npd_income_type"] == "FROM_INDIVIDUAL"  # самозанятый default
     assert f["currency"] == "usd"
-    assert f["products[0][name]"] == "Stillside Plus (plus_ww)"
+    assert f["products[0][name]"] == "Retellis Plus (plus_ww)"
     assert f["products[0][price]"] == "12.00"  # major units, not cents
     assert f["products[0][quantity]"] == "1"
     assert f["urlNotification"] == "https://app.example.com/v1/billing/webhook/prodamus"
     assert f["urlSuccess"] == "https://app.example.com/plans?checkout=done"
     # order_num encodes the linkage the webhook will parse back.
-    assert f["order_id"].startswith("stillside:u-1:plus_ww:")
+    assert f["order_id"].startswith("retellis:u-1:plus_ww:")
     # A signature is present and is a valid hex HMAC over the nested params.
     assert "signature" in f and len(f["signature"]) == 64
     assert out.redirect_url == "https://demo.payform.ru/u8zDE/"
@@ -287,7 +287,7 @@ def _success_event(uid: str, *, nonce: str = "deadbeef", plan_slug: str = "plus_
     return prodamus_parse_event(
         {
             "order_id": f"pro_{nonce}",
-            "order_num": f"stillside:{uid}:{plan_slug}:{nonce}",
+            "order_num": f"retellis:{uid}:{plan_slug}:{nonce}",
             "payment_status": "success",
             "sum": "12.00",
             "currency": "usd",
@@ -322,7 +322,7 @@ async def test_renewal_is_additive_and_updates_same_row():
     assert user.credits_usd == pytest.approx(20.0)  # additive, NOT a reset to 10
     second_sub = await billing.get_subscription(user_id=uid)
     assert second_sub.id == first_sub.id  # same row, updated provider_sub_id
-    assert second_sub.provider_sub_id == f"stillside:{uid}:plus_ww:bbb2"
+    assert second_sub.provider_sub_id == f"retellis:{uid}:plus_ww:bbb2"
     # Two invoices (one per payment), one subscription.
     assert len(await billing.list_invoices(user_id=uid)) == 2
 
@@ -333,7 +333,7 @@ async def test_canceled_sets_canceled_no_grant():
     ev = prodamus_parse_event(
         {
             "order_id": "pro_c1",
-            "order_num": f"stillside:{uid}:plus_ww:deadbeef",
+            "order_num": f"retellis:{uid}:plus_ww:deadbeef",
             "payment_status": "order_denied",
         }
     )
@@ -349,7 +349,7 @@ async def test_canceled_for_unknown_order_is_noop():
     ev = prodamus_parse_event(
         {
             "order_id": "pro_x",
-            "order_num": f"stillside:{uid}:plus_ww:zzz",
+            "order_num": f"retellis:{uid}:plus_ww:zzz",
             "payment_status": "order_canceled",
         }
     )
@@ -389,7 +389,7 @@ def _prodamus_app_kwargs():
         FEATURE_BILLING="1",
         PRODAMUS_SECRET_KEY=_SECRET,
         PRODAMUS_PAYFORM_URL="https://demo.payform.ru",
-        PRODAMUS_SYS="stillside",
+        PRODAMUS_SYS="retellis",
     )
 
 
@@ -418,7 +418,7 @@ async def test_endpoint_grants_on_verified_success(make_app, app_client):
             credits_usd=0.0,
         )
         uid = user.id
-        submit = _submit(order_num=f"stillside:{uid}:plus_ww:deadbeef", order_id="pro_e1")
+        submit = _submit(order_num=f"retellis:{uid}:plus_ww:deadbeef", order_id="pro_e1")
         payload = {
             "order_id": "pro_e1",
             "order_num": submit["order_num"],
@@ -454,7 +454,7 @@ async def test_endpoint_idempotent_on_redelivery(make_app, app_client):
             credits_usd=0.0,
         )
         uid = user.id
-        submit = _submit(order_num=f"stillside:{uid}:plus_ww:deadbeef", order_id="pro_e2")
+        submit = _submit(order_num=f"retellis:{uid}:plus_ww:deadbeef", order_id="pro_e2")
         payload = {
             "order_id": "pro_e2",
             "order_num": submit["order_num"],

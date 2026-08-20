@@ -1,4 +1,4 @@
-# Active Context — Stillside
+# Active Context — Retellis
 
 *Current focus, recent decisions, next steps. Update this file after every significant work session. Last updated: 2026-07-27 (UX de-technicalization — 10 ranked fixes + brand-contract disclosure relocation).*
 
@@ -26,7 +26,7 @@ The 10 fixes:
 
 **Lint:** `pnpm lint` is red with **15 pre-existing a11y errors** (`noSvgWithoutTitle` on HomeScreen/FamilySettingsScreen/RoutingScreen decorative SVGs, `useValidAnchor` on HomeScreen footer `href="#"` placeholders, `useSemanticElements`/`useButtonType` on MemoryScreen + PracticesScreen) — all on lines untouched by this work, proven by errors in files I never edited (MemoryScreen, PracticesScreen). The one error I introduced (a `set.vault.docs` `<a href="#">` in SettingsScreen) was converted to a `<span>` docs-pointer (no hosted docs URL yet — becomes a real `<Link>` once SECURITY.md is served at a stable URL). Net: 16 → 15, zero new errors. Pre-existing debt left for the screen owner.
 
-**Deferred (out of scope per plan):** `stillside-landing-prompt.txt` brief is stale re: zero-knowledge client vault — update in a follow-up so future agents don't re-introduce the old claim. Manual hosted/self-hosted browser smoke not run (no browser here) — plan verification steps 5–6.
+**Deferred (out of scope per plan):** `retellis-landing-prompt.txt` brief is stale re: zero-knowledge client vault — update in a follow-up so future agents don't re-introduce the old claim. Manual hosted/self-hosted browser smoke not run (no browser here) — plan verification steps 5–6.
 
 ## Joint family session — fifth fix: the auth race + the missing refetch (2026-07-24)
 
@@ -74,7 +74,7 @@ The `/family?tab=settings&subtab=key` page (and the personal Settings → Key va
 
 ## Prior workstream — Telegram messenger integration (2026-07-23)
 
-**Telegram messenger integration landed** (2026-07-23) — users can now talk to their companion from Telegram with the same memory + persona as the web app. Per-user bot model (each user creates their own bot via @BotFather, pastes the token in Settings → Integrations). Long-polling transport (one asyncio task per active bot in the API lifespan). 1:1 DM = personal Stillside account + one persona (groups/family deferred). The codebase is structured so WhatsApp/Signal/Discord slot in later via a new `MessengerAdapter` without touching core. All 7 phases done; verification green (1 pre-existing routing flake, unrelated).
+**Telegram messenger integration landed** (2026-07-23) — users can now talk to their companion from Telegram with the same memory + persona as the web app. Per-user bot model (each user creates their own bot via @BotFather, pastes the token in Settings → Integrations). Long-polling transport (one asyncio task per active bot in the API lifespan). 1:1 DM = personal Retellis account + one persona (groups/family deferred). The codebase is structured so WhatsApp/Signal/Discord slot in later via a new `MessengerAdapter` without touching core. All 7 phases done; verification green (1 pre-existing routing flake, unrelated).
 
 ### Telegram integration — file map (2026-07-23)
 
@@ -98,7 +98,7 @@ The `/family?tab=settings&subtab=key` page (and the personal Settings → Key va
 **Tests:** `tests/test_envelope_cipher.py` (12), `test_messenger_store.py` (11), `test_telegram_adapter.py` (18, httpx MockTransport), `test_orchestrator.py` (7), `test_messenger_commands.py` (19, FakeAdapter), `test_messengers_router.py` (13, fake adapter + X-User-Id) — all hermetic, no network/litellm. `apps/web/tests/messengers-api-client.test.ts` (7).
 
 ### Design decisions (Telegram, agreed with user)
-- Per-user bot (not one shared Stillside bot); Bot API only (no MTProto); long polling; 1:1 DM = personal+persona; one persona per bot; shared memory (same user_id+persona_id event chain); BYOK now resolved from `api_key_ciphertext` (the bind just approves the persona — no BYOK blob, no deep-link handshake re-seal; the server already has the key); no streaming (typing action + full reply); `bot_token` = server-side envelope encryption (honestly disclosed as NOT zero-knowledge); orchestrator is parallel (don't touch `_stream`).
+- Per-user bot (not one shared Retellis bot); Bot API only (no MTProto); long polling; 1:1 DM = personal+persona; one persona per bot; shared memory (same user_id+persona_id event chain); BYOK now resolved from `api_key_ciphertext` (the bind just approves the persona — no BYOK blob, no deep-link handshake re-seal; the server already has the key); no streaming (typing action + full reply); `bot_token` = server-side envelope encryption (honestly disclosed as NOT zero-knowledge); orchestrator is parallel (don't touch `_stream`).
 
 ### Known / deferred
 - `tests/test_routing.py::test_budget_hard_stop_skips_to_mock` — **fixed 2026-07-23**: the test monkeypatched `prov._env_key` to return `"k"` for *every* kind, which lit up the bedrock env candidate (added in the BYOK-upgrade sprint) and made `build_chain` raise `ProviderResolutionError` (incomplete AWS triplet) before the budget gate fired — the stream emitted `error` instead of `fallback`. Scoped the mock to `kind == "openai"` only, matching the test's intent. 562 api tests now green.

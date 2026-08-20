@@ -1,6 +1,6 @@
 'use client';
 
-// Thin typed wrapper over the Stillside API. Typed by @ai-companion/contracts
+// Thin typed wrapper over the Retellis API. Typed by @ai-companion/contracts
 // where it matters (provider metadata). The BYOK key itself never travels here
 // — it is sealed to the server inside lib/vault.ts and attached per request.
 //

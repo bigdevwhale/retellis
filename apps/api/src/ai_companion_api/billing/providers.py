@@ -465,12 +465,12 @@ async def yukassa_create_checkout(
         "capture": True,
         "save_payment_method": True,  # save the method → recurring token for autorenew
         "metadata": {"user_id": user_id, "plan_slug": plan.slug},
-        "description": f"Stillside {plan.name} ({plan.slug})",
+        "description": f"Retellis {plan.name} ({plan.slug})",
         "receipt": {
             "customer": {},
             "items": [
                 {
-                    "description": f"Stillside {plan.name} subscription",
+                    "description": f"Retellis {plan.name} subscription",
                     "quantity": "1",
                     "amount": {"value": amount_value, "currency": plan.currency},
                     "vat_code": 1,
@@ -602,19 +602,19 @@ def prodamus_verify_signature(payload: dict[str, Any], sign_header: str, secret:
 def prodamus_parse_event(payload: dict[str, Any]) -> ProdamusEvent | None:
     """Parse a Prodamus JSON webhook into a normalised event. ``user_id`` +
     ``plan_slug`` are recovered from ``order_num`` (we encoded them at checkout
-    as ``stillside-<user_id>-<plan_slug>-<nonce>``); the passthrough is the
+    as ``retellis-<user_id>-<plan_slug>-<nonce>``); the passthrough is the
     linkage — the webhook body is NOT trusted alone (the ``Sign`` is the auth).
     Returns None when ``order_num`` is missing or doesn't decode (an event we
     can't link to a user/plan — the handler acks and ignores)."""
     order_id = str(payload.get("order_id") or "")
     order_num = str(payload.get("order_num") or "")
     status = str(payload.get("payment_status") or "")
-    # ``order_num`` is ``stillside:<user_id>:<plan_slug>:<nonce>`` (see
+    # ``order_num`` is ``retellis:<user_id>:<plan_slug>:<nonce>`` (see
     # ``prodamus_create_checkout`` for the separator choice). A shape that
     # doesn't decode → no linkage → the handler acks and ignores.
     parts = order_num.split(":") if order_num else []
-    user_id = parts[1] if len(parts) == 4 and parts[0] == "stillside" else None
-    plan_slug = parts[2] if len(parts) == 4 and parts[0] == "stillside" else None
+    user_id = parts[1] if len(parts) == 4 and parts[0] == "retellis" else None
+    plan_slug = parts[2] if len(parts) == 4 and parts[0] == "retellis" else None
     return ProdamusEvent(
         event_id=order_id,
         order_num=order_num,
@@ -658,11 +658,11 @@ async def prodamus_create_checkout(
     Prodamus's domain — PCI-scope SAQ-A). The link is a ONE-OFF payment (no
     ``subscription`` param): Prodamus auto-recurring needs the "Clubs" system
     (a subscription id pre-created in the merchant LK, +1% from the 2nd charge,
-    1000₽ setup) — an operator opt-in we don't assume. Stillside's
+    1000₽ setup) — an operator opt-in we don't assume. Retellis's
     credit-metered model absorbs this: a successful payment grants the plan +
     credits for a 30-day window; the user re-checks-out to renew.
 
-    ``order_id`` carries ``stillside-<user_id>-<plan_slug>-<nonce>`` so the
+    ``order_id`` carries ``retellis-<user_id>-<plan_slug>-<nonce>`` so the
     webhook links the payment back WITHOUT trusting the redirect.
     ``npd_income_type=FROM_INDIVIDUAL`` is the самозанятый/NPD default. 54-ФЗ
     fiscalization runs on Prodamus's side (auto for NPD); we don't assert FFD
@@ -678,11 +678,11 @@ async def prodamus_create_checkout(
     ):
         raise _ProviderUnavailable("prodamus")
     nonce = secrets.token_hex(8)
-    # `:` separates the encoded fields — a Stillside user_id is a dashed UUID
+    # `:` separates the encoded fields — a Retellis user_id is a dashed UUID
     # (``237020e9-...``) and plan_slug uses ``_``, so ``:`` is the one char that
     # can't appear in any component. The webhook parses this back to link the
     # payment to the user + plan WITHOUT trusting the redirect.
-    order_num = f"stillside:{user_id}:{plan.slug}:{nonce}"
+    order_num = f"retellis:{user_id}:{plan.slug}:{nonce}"
     # Price: plan.price_cents is minor units (cents/kopecks); Prodamus takes
     # major-unit amounts (12.00, not 1200).
     price = f"{plan.price_cents / 100:.2f}"
@@ -692,7 +692,7 @@ async def prodamus_create_checkout(
         "currency": _prodamus_currency(plan.currency),
         "order_id": order_num,
         "products": [
-            {"name": f"Stillside {plan.name} ({plan.slug})", "price": price, "quantity": "1"}
+            {"name": f"Retellis {plan.name} ({plan.slug})", "price": price, "quantity": "1"}
         ],
         "urlSuccess": return_url,
         "urlReturn": return_url,

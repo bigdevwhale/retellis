@@ -81,7 +81,7 @@ async def test_oidc_begin_callback_me(make_app, app_client):
         qs = dict(urllib.parse.parse_qs(urllib.parse.urlparse(loc).query))
         state = qs["state"][0]
         assert qs["code_challenge_method"][0] == "S256"
-        assert "stillside_oidc_state" in ac.cookies
+        assert "retellis_oidc_state" in ac.cookies
 
         # 2) callback with the matching state + a fake code → session cookie.
         cb = await ac.get("/v1/auth/callback", params={"code": "fake-code", "state": state})
@@ -90,7 +90,7 @@ async def test_oidc_begin_callback_me(make_app, app_client):
             cb.headers["location"].rstrip("/").endswith("://localhost:3000")
             or "/v1" not in cb.headers["location"]
         )
-        assert "stillside_sess" in ac.cookies
+        assert "retellis_sess" in ac.cookies
 
         # 3) /me returns the OIDC principal.
         me = await ac.get("/v1/auth/me")
@@ -137,4 +137,4 @@ async def test_oidc_callback_missing_params_redirects_home(make_app, app_client,
         params.pop(missing)
         r = await ac.get("/v1/auth/callback", params=params)
         assert r.status_code == 303  # sent home unauthenticated, no session set
-        assert "stillside_sess" not in ac.cookies
+        assert "retellis_sess" not in ac.cookies

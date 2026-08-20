@@ -1,4 +1,4 @@
-# System Patterns — Stillside
+# System Patterns — Retellis
 
 *Architecture and recurring patterns. For full detail see `CLAUDE.md` (auto-loaded); this file is the fast map of where things live and how they connect.*
 
@@ -71,7 +71,7 @@ recall_chains (rank + walk `prev_event_id` back → 2–4 intact chains) → `bu
 
 ## Billing pattern
 
-`_provider_for_country`: RU → ЮKassa else Prodamus; WW → Prodamus else Paddle. Paddle grants only on `transaction.completed`; `subscription.*` only updates status. Prodamus: HMAC `Sign` is the sole webhook auth, `order_num = stillside:<user_id>:<plan_slug>:<nonce>` (`:` because user ids are dashed UUIDs). Webhook routes are in `_PUBLIC_POST`.
+`_provider_for_country`: RU → ЮKassa else Prodamus; WW → Prodamus else Paddle. Paddle grants only on `transaction.completed`; `subscription.*` only updates status. Prodamus: HMAC `Sign` is the sole webhook auth, `order_num = retellis:<user_id>:<plan_slug>:<nonce>` (`:` because user ids are dashed UUIDs). Webhook routes are in `_PUBLIC_POST`.
 
 ## Messenger integration pattern (Telegram, 2026-07-23)
 

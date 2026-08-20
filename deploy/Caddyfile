@@ -1,4 +1,4 @@
-# Stillside reverse proxy — single origin for the web PWA + the FastAPI API.
+# Retellis reverse proxy — single origin for the web PWA + the FastAPI API.
 #
 # Why a proxy at all (and not two ports)? The verified session cookie is
 # HttpOnly + Secure + SameSite=Lax. SameSite=Lax is only first-party when the
@@ -11,7 +11,7 @@
 #   - local / no domain: CADDY_SITE=:80  (HTTP — fine for localhost; the cookie
 #     is marked Secure only when PUBLIC_ORIGIN is an https URL, so HTTP still
 #     carries it on localhost).
-#   - real domain:       CADDY_SITE=stillside.example  → Caddy auto-provisions
+#   - real domain:       CADDY_SITE=retellis.com  → Caddy auto-provisions
 #     TLS via Let's Encrypt and redirects 80 → 443. Set PUBLIC_ORIGIN to the
 #     https URL so cookies are marked Secure.
 

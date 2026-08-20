@@ -140,7 +140,7 @@ export function HomeScreen() {
               <p>{t('landing.diff.a.p')}</p>
             </div>
             <div className="diffcard diffcard--b">
-              <h3>Stillside</h3>
+              <h3>Retellis</h3>
               <p>{t('landing.diff.b.p')}</p>
             </div>
           </div>
@@ -155,7 +155,7 @@ export function HomeScreen() {
         </div>
       </section>
 
-      {/* ============ 3. WHY STILLSIDE ============ */}
+      {/* ============ 3. WHY RETELLIS ============ */}
       <section className="section">
         <div className="wrap">
           <p className="eyebrow">{t('landing.why.eyebrow')}</p>
@@ -554,7 +554,7 @@ export function HomeScreen() {
         <div className="wrap foot__row">
           <span className="logo">
             <span className="logo__mark" />
-            Stillside
+            Retellis
           </span>
           <nav className="foot__links">
             <a href="#">{t('landing.foot.source')}</a>
@@ -563,7 +563,7 @@ export function HomeScreen() {
             <a href="#pricing">{t('landing.foot.pricing')}</a>
             <a href="#">{t('landing.foot.contact')}</a>
           </nav>
-          <span className="tnum foot__tag">Stillside · open-source · MIT</span>
+          <span className="tnum foot__tag">Retellis · open-source · MIT</span>
         </div>
       </footer>
     </div>

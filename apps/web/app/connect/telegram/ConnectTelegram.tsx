@@ -147,8 +147,8 @@ export function ConnectTelegram() {
             </div>
             <p className="card-desc">
               {L2({
-                en: 'Approving connects this Telegram bot to your Stillside account. It will use the persona above and share the same memory as the web app.',
-                ru: 'Подтверждение привязывает этого Telegram-бота к вашему аккаунту Stillside. Он будет использовать выбранную персону и ту же память, что и веб-приложение.',
+                en: 'Approving connects this Telegram bot to your Retellis account. It will use the persona above and share the same memory as the web app.',
+                ru: 'Подтверждение привязывает этого Telegram-бота к вашему аккаунту Retellis. Он будет использовать выбранную персону и ту же память, что и веб-приложение.',
               })}
             </p>
 

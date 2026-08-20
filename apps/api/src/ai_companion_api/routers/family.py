@@ -448,7 +448,7 @@ async def create_invite(body: InviteCreate, request: Request) -> FamilyInvite:
         transport = default_transport(_settings(request))
         link = _settings(request).public_origin.rstrip("/") + f"/family/accept?token={token}"
         body_text = (
-            f"You've been invited to join the Stillside family "
+            f"You've been invited to join the Retellis family "
             f'"{fam.name}".\n\nThis link expires in 7 days. If you '
             "didn't expect this email, you can safely ignore it."
         )

@@ -9,16 +9,16 @@ import { LangProvider } from '@/lib/i18n';
 import { ThemeProvider } from '@/lib/theme';
 
 export const metadata: Metadata = {
-  title: 'Stillside — calm AI, your keys or ours',
+  title: 'Retellis — calm AI, your keys or ours',
   description:
-    'Stillside — an open-source AI companion for calm, clarity, and inner peace. Bring your own keys, or let us handle it.',
+    'Retellis — an open-source AI companion for calm, clarity, and inner peace. Bring your own keys, or let us handle it.',
   manifest: '/manifest.webmanifest',
-  applicationName: 'Stillside',
+  applicationName: 'Retellis',
   icons: {
     icon: [{ url: '/icons/icon.svg', type: 'image/svg+xml' }],
     apple: [{ url: '/icons/icon.svg' }],
   },
-  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Stillside' },
+  appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'Retellis' },
 };
 
 export const viewport: Viewport = {
@@ -62,7 +62,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // cookie still routes to the Rail optimistically and AuthGate handles the
   // redirect to /login. `cookies()` is async in Next 15 — await it.
   const cookieStore = await cookies();
-  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'stillside_sess';
+  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'retellis_sess';
   const hasSession = Boolean(cookieStore.get(cookieName));
   return (
     <html lang="en" data-theme="dark" suppressHydrationWarning>

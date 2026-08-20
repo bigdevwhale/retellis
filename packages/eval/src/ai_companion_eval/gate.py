@@ -21,7 +21,7 @@ The gate **passes iff**
   contain the expected answer? memory-on surfaces the seeded event via the real
   embed → rank → chain pipeline; memory-off has no chains → 0.
 
-Stillside turns use the local mock (``mock.mock_reply``) so the package stays
+Retellis turns use the local mock (``mock.mock_reply``) so the package stays
 self-contained. ``pnpm eval`` writes ``results/baseline.json`` and exits 0 on
 pass, 1 on fail.
 """

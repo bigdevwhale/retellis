@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 BUILTIN_PERSONAS = ["aria", "sam", "nico", "mira", "lou"]
 
 HELP_TEXT = (
-    "I'm your Stillside companion on Telegram — same memory, same persona as "
+    "I'm your Retellis companion on Telegram — same memory, same persona as "
     "the web app.\n\n"
     "/help — this message\n"
     "/persona — switch persona\n"
@@ -133,8 +133,8 @@ async def _cmd_start(session: BotSession, update) -> None:  # type: ignore[no-un
         await session.adapter.send_text(
             session.bot_token,
             update.chat_id,
-            "Hi! I'm a Stillside companion bot. To connect me to your account, "
-            "open Stillside → Settings → Integrations → Telegram and follow the steps.",
+            "Hi! I'm a Retellis companion bot. To connect me to your account, "
+            "open Retellis → Settings → Integrations → Telegram and follow the steps.",
         )
         return
     # Verify the token binds to THIS messenger.
@@ -143,7 +143,7 @@ async def _cmd_start(session: BotSession, update) -> None:  # type: ignore[no-un
             session.bot_token,
             update.chat_id,
             "That connect link doesn't match this bot, or it expired. "
-            "Open Stillside → Settings → Integrations to get a fresh one.",
+            "Open Retellis → Settings → Integrations to get a fresh one.",
         )
         return
     # Stash the chat_id so the web UI can show it + so we know where to send.
@@ -153,11 +153,11 @@ async def _cmd_start(session: BotSession, update) -> None:  # type: ignore[no-un
     await session.adapter.send_inline(
         session.bot_token,
         update.chat_id,
-        "Connect this bot to your Stillside account?\n\n"
+        "Connect this bot to your Retellis account?\n\n"
         "Your BYOK keys stay zero-knowledge: the web page unlocks your vault and "
         "seals the keys to the server for the bot to use during a reply. The "
         "server can't see your passphrase.",
-        [[ButtonSpec("Connect to Stillside", url)]],
+        [[ButtonSpec("Connect to Retellis", url)]],
     )
 
 

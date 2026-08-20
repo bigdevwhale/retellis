@@ -6,7 +6,7 @@
 //  - no bot yet: an init form (paste a @BotFather token, pick a persona). On
 //    submit the server validates the token via getMe and returns a connect
 //    link; we show step 2 ("open your bot in Telegram, send /start <token>",
-//    then approve in Stillside").
+//    then approve in Retellis").
 //  - bot exists: a status card (status badge, persona, @username, chat id,
 //    last error) with Pause/Resume, persona switch, and Disconnect.
 //

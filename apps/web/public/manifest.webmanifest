@@ -1,7 +1,7 @@
 {
-  "name": "Stillside",
-  "short_name": "Stillside",
-  "description": "Stillside — an open-source AI companion for calm, clarity, and inner peace. Bring your own keys.",
+  "name": "Retellis",
+  "short_name": "Retellis",
+  "description": "Retellis — an open-source AI companion for calm, clarity, and inner peace. Bring your own keys.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

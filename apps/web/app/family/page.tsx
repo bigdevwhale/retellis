@@ -7,7 +7,7 @@ import { cookies } from 'next/headers';
 // FamilySettingsScreen is itself a client component; GuestFeature is the client
 // wrapper that picks showcase vs. real.
 export default async function FamilyPage() {
-  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'stillside_sess';
+  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'retellis_sess';
   const hasSession = Boolean((await cookies()).get(cookieName));
   return <GuestFeature feature="family" hasSession={hasSession} real={<FamilySettingsScreen />} />;
 }

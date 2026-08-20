@@ -1,4 +1,4 @@
--- Stillside Postgres init.
+-- Retellis Postgres init.
 -- pgvector extension for event-chain embeddings (Phase 3 recall).
 CREATE EXTENSION IF NOT EXISTS vector;
 

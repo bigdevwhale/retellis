@@ -140,12 +140,12 @@ export function TopBar() {
 
   return (
     <header className="topbar-nav">
-      <Link className="topbar-brand" href="/" aria-label="Stillside home">
+      <Link className="topbar-brand" href="/" aria-label="Retellis home">
         <div className="topbar-mark" aria-hidden>
           ◐
         </div>
         <div className="topbar-brand-text">
-          <b>Stillside</b>
+          <b>Retellis</b>
           <span>{t('brand.tag')}</span>
         </div>
       </Link>

@@ -59,11 +59,11 @@ class SMTPEmailTransport:
     async def send(self, *, to: str, link: str) -> None:
         s = self.settings
         msg = EmailMessage()
-        msg["Subject"] = "Your Stillside sign-in link"
-        msg["From"] = s.smtp_from or "noreply@stillside.local"
+        msg["Subject"] = "Your Retellis sign-in link"
+        msg["From"] = s.smtp_from or "noreply@retellis.local"
         msg["To"] = to
         msg.set_content(
-            f"Click to sign in to Stillside:\n\n{link}\n\nThis link expires in 15 minutes."
+            f"Click to sign in to Retellis:\n\n{link}\n\nThis link expires in 15 minutes."
         )
         # smtplib is blocking; run in a thread to avoid stalling the event loop.
         import asyncio

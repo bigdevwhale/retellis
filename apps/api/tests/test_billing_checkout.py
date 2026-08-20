@@ -46,7 +46,7 @@ def _hosted_kwargs(
     if with_prodamus:
         kw["PRODAMUS_SECRET_KEY"] = "prodamus_live_test_secret_value_0123456789"
         kw["PRODAMUS_PAYFORM_URL"] = "https://demo.payform.ru"
-        kw["PRODAMUS_SYS"] = "stillside"
+        kw["PRODAMUS_SYS"] = "retellis"
     return kw
 
 
@@ -209,7 +209,7 @@ async def test_checkout_happy_path_prodamus(make_app, app_client, monkeypatch):
             return _CS(
                 redirect_url="https://demo.payform.ru/u8zDE/",
                 provider=BillingProvider.prodamus,
-                provider_sub_id=f"stillside-{user_id}-plus_ww-deadbeef",
+                provider_sub_id=f"retellis-{user_id}-plus_ww-deadbeef",
             )
 
         monkeypatch.setattr(

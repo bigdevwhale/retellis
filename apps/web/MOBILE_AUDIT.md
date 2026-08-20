@@ -1,4 +1,4 @@
-# Stillside — Mobile / PWA Audit (`apps/web`)
+# Retellis — Mobile / PWA Audit (`apps/web`)
 
 Audit date: 2026-07-15. Scope: mobile responsiveness, touch UX, PWA setup, forms (BYOK/vault), streaming, secondary screens.
 

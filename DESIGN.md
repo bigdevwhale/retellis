@@ -1,4 +1,4 @@
-# DESIGN.md — Stillside · AI companion PWA
+# DESIGN.md — Retellis · AI companion PWA
 
 > Brand contract for an open-source AI companion (psychotherapist / friend / coach) delivered as a SPA PWA with BYOK swappable LLM keys. Bound to the **Stripe** design system, tuned warmer on companion/chat surfaces and kept precise on config/routing surfaces.
 

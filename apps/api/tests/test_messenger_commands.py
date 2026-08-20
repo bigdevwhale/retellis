@@ -84,7 +84,7 @@ def deps():
         envelope=envelope,
         messenger_store=messenger_store,
         adapter=adapter,
-        public_origin="https://stillside.app",
+        public_origin="https://retellis.app",
     )
 
 
@@ -192,7 +192,7 @@ async def test_start_no_token_greets(deps) -> None:
     sess = _session(deps, m)
     await handle_update(sess, _upd(command="start"))
     text = [s for s in deps.adapter.sent if s[0] == "text"]
-    assert "Stillside" in text[-1][2]
+    assert "Retellis" in text[-1][2]
 
 
 async def test_help_command(deps) -> None:

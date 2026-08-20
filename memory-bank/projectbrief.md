@@ -1,10 +1,10 @@
-# Project Brief — Stillside
+# Project Brief — Retellis
 
 *Foundation document. All other memory-bank files build on this. Changes here are rare and deliberate.*
 
 ## What we are building
 
-**Stillside** — an open-source AI companion PWA with **BYOK** (bring-your-own, swappable LLM API keys). Users chat with a configurable persona; the system remembers what matters emotionally and never pretends to be something it isn't.
+**Retellis** — an open-source AI companion PWA with **BYOK** (bring-your-own, swappable LLM API keys). Users chat with a configurable persona; the system remembers what matters emotionally and never pretends to be something it isn't.
 
 ## Core differentiators (vs plain RAG chatbots)
 

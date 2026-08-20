@@ -1,6 +1,6 @@
 # Security, told straight
 
-This is the canonical, honest description of how Stillside stores and handles your
+This is the canonical, honest description of how Retellis stores and handles your
 API keys. The in-app UI intentionally keeps key copy short and neutral; the full
 detail lives here.
 

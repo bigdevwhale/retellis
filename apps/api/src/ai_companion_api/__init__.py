@@ -1,1 +1,1 @@
-"""Stillside API package."""
+"""Retellis API package."""

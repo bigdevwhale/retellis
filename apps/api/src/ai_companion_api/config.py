@@ -105,7 +105,7 @@ class Settings(BaseSettings):
     public_origin: str = "http://localhost:3000"
     # Session cookie name + lifetime. The cookie is HttpOnly + Secure +
     # SameSite=Lax and carries an opaque session token (row in ``sessions``).
-    auth_session_cookie: str = "stillside_sess"
+    auth_session_cookie: str = "retellis_sess"
     auth_session_ttl_seconds: int = 60 * 60 * 24 * 14  # 14 days
     # Secret for signing magic-link tokens (HMAC-SHA256). Required when
     # auth_backend == magic_link. Never logged.

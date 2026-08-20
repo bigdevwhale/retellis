@@ -1,8 +1,8 @@
-# Product Context — Stillside
+# Product Context — Retellis
 
 ## Why this exists
 
-People who want an AI companion today choose between closed products that harvest data and perform fake intimacy, or DIY RAG stacks that forget everything that matters. Stillside offers: your own keys, your own data (self-hostable), memory that follows emotional weight, and a companion that is honest about what it is.
+People who want an AI companion today choose between closed products that harvest data and perform fake intimacy, or DIY RAG stacks that forget everything that matters. Retellis offers: your own keys, your own data (self-hostable), memory that follows emotional weight, and a companion that is honest about what it is.
 
 ## Brand contract ("disclose, don't perform")
 

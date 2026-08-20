@@ -3720,7 +3720,7 @@ table.rt td .mono {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
 }
-/* Persona gallery card (redesigned via Open Design: stillside-persona-memory-
+/* Persona gallery card (redesigned via Open Design: retellis-persona-memory-
    redesign). A clean stacked card — avatar, name (light display weight), role as
    plain body text, vibe line — with a quiet action row that reveals on hover (or
    focus, or when selected / on touch screens). The selected card carries an

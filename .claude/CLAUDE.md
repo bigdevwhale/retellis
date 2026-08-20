@@ -21,7 +21,7 @@ Only fall back to reading source files when the memory bank doesn't answer the q
 
 ## What this is
 
-**Stillside** — an open-source AI companion PWA with BYOK (bring your own swappable LLM API keys). The differentiator vs plain RAG is event-chain memory with emotional salience + a deterministic, *injected-not-remembered* persona block (see DESIGN.md and § Event-chain memory & recall below). The codebase is a **polyglot pnpm monorepo**: a Next.js PWA, a FastAPI backend, a shared contracts package (zod ↔ pydantic with a drift check), and a Python empathy-eval gate.
+**Retellis** — an open-source AI companion PWA with BYOK (bring your own swappable LLM API keys). The differentiator vs plain RAG is event-chain memory with emotional salience + a deterministic, *injected-not-remembered* persona block (see DESIGN.md and § Event-chain memory & recall below). The codebase is a **polyglot pnpm monorepo**: a Next.js PWA, a FastAPI backend, a shared contracts package (zod ↔ pydantic with a drift check), and a Python empathy-eval gate.
 
 Read `DESIGN.md` (brand contract) — load-bearing reference, not docs. Architecture, data schema, vault scheme, and security invariants live in this file below.
 

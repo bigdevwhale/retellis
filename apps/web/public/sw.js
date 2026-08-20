@@ -1,4 +1,4 @@
-/* Minimal Stillside service worker — network-first for navigation,
+/* Minimal Retellis service worker — network-first for navigation,
    cache-first for same-origin static assets. Serwist integration is deferred;
    installability is preserved via manifest + icons even if this SW fails.
 

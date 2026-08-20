@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 // memory screen. `hasSession` (HttpOnly cookie presence, read server-side) is
 // the flash-free signal — see app/layout.tsx + components/GuestFeature.tsx.
 export default async function Page() {
-  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'stillside_sess';
+  const cookieName = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'retellis_sess';
   const hasSession = Boolean((await cookies()).get(cookieName));
   return <GuestFeature feature="memory" hasSession={hasSession} real={<MemoryScreen />} />;
 }

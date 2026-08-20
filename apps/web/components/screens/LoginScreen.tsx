@@ -18,8 +18,8 @@ import { useTheme } from '@/lib/theme';
 /** Brand mark — a crescent moon over still water (the "still side" of evening). */
 function BrandGlyph() {
   return (
-    <svg viewBox="0 0 48 48" fill="none" role="img" aria-label="Stillside">
-      <title>Stillside</title>
+    <svg viewBox="0 0 48 48" fill="none" role="img" aria-label="Retellis">
+      <title>Retellis</title>
       <defs>
         <linearGradient id="lg-still" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
           <stop stopColor="#533afd" />
@@ -161,7 +161,7 @@ export function LoginScreen() {
           <div className="login-glyph">
             <BrandGlyph />
           </div>
-          <h1>{L2({ en: 'Stillside', ru: 'Stillside' })}</h1>
+          <h1>{L2({ en: 'Retellis', ru: 'Retellis' })}</h1>
           <p className="login-tagline">
             {L2({
               en: 'A companion that remembers what mattered.',

@@ -1,4 +1,4 @@
-# Stillside Web — Next.js PWA. Multi-stage: deps → build → runner.
+# Retellis Web — Next.js PWA. Multi-stage: deps → build → runner.
 FROM node:20-alpine AS deps
 RUN corepack enable
 WORKDIR /app

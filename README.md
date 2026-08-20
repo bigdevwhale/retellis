@@ -1,16 +1,16 @@
-# Stillside
+# Retellis
 
 > An AI companion that doesn't pretend to feel. Open-source, self-hostable, bring-your-own-key.
 
-`still` — calm. `side` — by your side. Stillside is an AI psychotherapist / friend / coach you run on your own machine, with your own LLM keys, your own model choices, and your own budget. It remembers what matters emotionally, and it is honest about what it is.
+From *re-tell* — the companion re-tells the event-chain of your memory with emotional salience. Retellis is an AI psychotherapist / friend / coach you run on your own machine, with your own LLM keys, your own model choices, and your own budget. It remembers what matters emotionally, and it is honest about what it is.
 
 The one line we won't cross: **disclose, don't perform.** The companion never claims feelings it doesn't have. The UI never claims confidentiality it can't guarantee. This is the brand and the differentiator — not a footnote.
 
-![license](https://img.shields.io/badge/license-Apache--2.0-533afd) ![node](https://img.shields.io/badge/node-%E2%89%A520-1a2233) ![python](https://img.shields.io/badge/python-3.12-1a2233) ![pnpm](https://img.shields.io/badge/pnpm-10.33.2-1a2233) ![status](https://img.shields.io/badge/status-MVP-9b6829)
+![license](https://img.shields.io/badge/license-Apache--2.0-533afd) ![node](https://img.shields.io/badge/node-%E2%89%A520-1a2233) ![python](https://img.shields.io/badge/python-3.12-1a2233) ![pnpm](https://img.shields.io/badge/pnpm-10.33.2-1a2233) ![status](https://img.shields.io/badge/status-MVP-9b6829) ![repo](https://img.shields.io/badge/repo-github.com/bigdevwhale/retellis-181722)
 
 ---
 
-## Why Stillside?
+## Why Retellis?
 
 **1. Event-chain memory with emotional salience — not plain RAG.**
 Recall returns 2–4 *intact conversation chains* ranked by `0.5·cosine + 0.3·salience + 0.2·recency`, walked backward along `prev_event_id` — not isolated snippets stripped of context.
@@ -67,7 +67,7 @@ pnpm --filter @ai-companion/web dev          # web on :3000, dev-only /v1 rewrit
 
 ## What makes it different
 
-**Event-chain vs. snippet RAG.** Plain retrieval-augmented chat pulls isolated snippets, which fragments emotional context — the gap that motivates this project puts RAG-on-companions empathy regression in the ~22–44% range. Stillside recalls whole chains: the user's message, the reply, the reply before it, linked by `prev_event_id`, so the companion keeps the thread instead of resurfacing detached facts.
+**Event-chain vs. snippet RAG.** Plain retrieval-augmented chat pulls isolated snippets, which fragments emotional context — the gap that motivates this project puts RAG-on-companions empathy regression in the ~22–44% range. Retellis recalls whole chains: the user's message, the reply, the reply before it, linked by `prev_event_id`, so the companion keeps the thread instead of resurfacing detached facts.
 
 **Injected, not remembered, persona.** The persona block (`persona_block.build_persona_block`) is rebuilt from config and injected into context **every turn**. The companion's voice cannot drift as the chain grows — the model never has to *remember* who it is.
 
@@ -175,7 +175,7 @@ ai-companion/
 
 ## Roadmap & status
 
-**Honest scope.** Stillside is an MVP. The original plan fixed single-user as the MVP scope and pushed multi-user to post-MVP; the operator explicitly overrode that, so multi-user is in scope and largely wired (cookie sessions, magic links, families with a shared memory layer, everything scoped by `user_id` / `family_id`). **Clinical validation is out of scope** — Stillside is a companion, not a licensed clinician, and the UI says so. Self-hosted and hosted are both first-class `DEPLOYMENT_MODE`s; hosted enforces stricter boot validation (https origin, no insecure user-header escape hatch).
+**Honest scope.** Retellis is an MVP. The original plan fixed single-user as the MVP scope and pushed multi-user to post-MVP; the operator explicitly overrode that, so multi-user is in scope and largely wired (cookie sessions, magic links, families with a shared memory layer, everything scoped by `user_id` / `family_id`). **Clinical validation is out of scope** — Retellis is a companion, not a licensed clinician, and the UI says so. Self-hosted and hosted are both first-class `DEPLOYMENT_MODE`s; hosted enforces stricter boot validation (https origin, no insecure user-header escape hatch).
 
 **Post-MVP, explicitly deferred:**
 - `litellm.embedding` + an LLM-judge salience (`salience_llm.judge_salience`, already wired) replacing the deterministic embedder and heuristic salience — signatures stable, swap-in upgrade.
@@ -219,7 +219,7 @@ When you change a wire shape, change **both** the pydantic models and the zod sc
 
 ## License
 
-Apache-2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Stillside depends on Next.js, React, FastAPI, LiteLLM, SQLAlchemy, pgvector, Langfuse, libsodium, Tailwind, Serwist, and Biome — their own licenses are retained at install time.
+Apache-2.0. See [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE). Retellis depends on Next.js, React, FastAPI, LiteLLM, SQLAlchemy, pgvector, Langfuse, libsodium, Tailwind, Serwist, and Biome — their own licenses are retained at install time.
 
 ---
 

@@ -115,7 +115,7 @@ services:
       # Secure only when this is an https URL; http://localhost is correct for
       # the local stack. For a real domain set PUBLIC_ORIGIN=https://that.domain.
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost}
-      AUTH_SESSION_COOKIE: ${AUTH_SESSION_COOKIE:-stillside_sess}
+      AUTH_SESSION_COOKIE: ${AUTH_SESSION_COOKIE:-retellis_sess}
       # NEVER enable in production. Dev/test escape hatch that trusts X-User-Id.
       AUTH_ALLOW_INSECURE_USER_HEADER: ${AUTH_ALLOW_INSECURE_USER_HEADER:-0}
       # OIDC / SSO (required when AUTH_BACKEND=oidc)
@@ -178,7 +178,7 @@ services:
       # the client uses same-origin /v1. Do NOT set it to a cross-origin URL —
       # that would break the session-cookie model.
       NODE_ENV: production
-      NEXT_PUBLIC_SESSION_COOKIE: ${AUTH_SESSION_COOKIE:-stillside_sess}
+      NEXT_PUBLIC_SESSION_COOKIE: ${AUTH_SESSION_COOKIE:-retellis_sess}
       # Note: the /v1 → api:8000 proxy is baked into the image at build time
       # (Dockerfile.web sets API_PROXY_TARGET) because Next.js evaluates
       # `rewrites()` at build, not runtime. Caddy is still the recommended

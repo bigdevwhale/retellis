@@ -63,7 +63,7 @@ async def test_signup_login_me_logout(make_app, app_client):
         assert principal["email"] == "alice@example.com"  # normalized
         assert principal["auth_backend"] == "local"
         assert principal["plan"] == "self_hosted_free"
-        assert "stillside_sess" in ac.cookies
+        assert "retellis_sess" in ac.cookies
 
         # The session cookie authorizes protected routes.
         assert (await ac.get("/v1/providers")).status_code == 200
@@ -116,7 +116,7 @@ async def test_login_wrong_password_and_unknown_user(make_app, app_client):
             json={"email": "bob@example.com", "password": "correcthorsebattery"},
         )
         assert good.status_code == 200
-        assert "stillside_sess" in ac.cookies
+        assert "retellis_sess" in ac.cookies
 
 
 async def test_local_endpoints_404_under_oidc(make_app, app_client, monkeypatch):

@@ -1,6 +1,6 @@
 // Lightweight cookie-presence gate.
 //
-// The browser session cookie (`stillside_sess` by default — see
+// The browser session cookie (`retellis_sess` by default — see
 // apps/api config `auth_session_cookie`) is HttpOnly, so this middleware can
 // only check *presence*, not validity. Real enforcement is at the API
 // (AuthMiddleware resolves the cookie → verified Principal, 401 otherwise).
@@ -22,7 +22,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { isPublicRoute } from './lib/public-routes';
 
-const COOKIE = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'stillside_sess';
+const COOKIE = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? 'retellis_sess';
 
 // Everything except: the login route, Next internals, static, icons, sw, icons,
 // manifest, and the API path (proxied elsewhere). Trailing-API /v1 is excluded

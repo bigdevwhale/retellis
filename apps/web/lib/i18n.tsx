@@ -36,14 +36,14 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   },
   'home.cta.start': { en: 'Get started — free', ru: 'Начать — бесплатно' },
   'home.cta.plans': { en: 'See plans', ru: 'Посмотреть тарифы' },
-  'home.feat.title': { en: 'Why Stillside', ru: 'Почему Stillside' },
+  'home.feat.title': { en: 'Why Retellis', ru: 'Почему Retellis' },
   'home.how.title': { en: 'How it works', ru: 'Как это работает' },
   'home.closing': { en: 'Less noise. More you.', ru: 'Меньше шума. Больше вас.' },
 
   // --- Landing page (port of the Open Design marketing landing) ---
   // Bilingual copy is keyed; unilingual literals (flowline chips, BYOK ключ /
   // env / ollama / mock, mono labels, prices, 64%, $0.41, Free/Plus/Pro, the
-  // "Stillside · open-source · MIT" tagline) live as constants in HomeScreen.
+  // "Retellis · open-source · MIT" tagline) live as constants in HomeScreen.
   'landing.hero.badge': { en: 'Open-source · BYOK', ru: 'Открытый код · свои ключи' },
   'landing.hero.h1': { en: 'A quiet space to think.', ru: 'Тихое место для раздумий.' },
   'landing.hero.sub': {
@@ -82,8 +82,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'landing.flowline.msg': { en: 'msg', ru: 'сообщение' },
 
   'landing.why.eyebrow': {
-    en: '03 · why stillside',
-    ru: '03 · почему stillside',
+    en: '03 · why retellis',
+    ru: '03 · почему retellis',
   },
   'landing.why.h2': {
     en: 'A whole space for self-care',
@@ -318,8 +318,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Тихое место для раздумий — на ваших ключах.',
   },
   'onb.p': {
-    en: 'Stillside is an open-source AI that listens, reflects, and remembers — for calm, clarity, and inner peace. Bring your own keys, or let us handle it. Either way, it’s yours.',
-    ru: 'Stillside — это ИИ с открытым кодом, который слушает, помогает осмыслить и запоминает — ради спокойствия, ясности и внутреннего равновесия. Подключите свои ключи или доверьте всё нам. В любом случае это ваше.',
+    en: 'Retellis is an open-source AI that listens, reflects, and remembers — for calm, clarity, and inner peace. Bring your own keys, or let us handle it. Either way, it’s yours.',
+    ru: 'Retellis — это ИИ с открытым кодом, который слушает, помогает осмыслить и запоминает — ради спокойствия, ясности и внутреннего равновесия. Подключите свои ключи или доверьте всё нам. В любом случае это ваше.',
   },
   'onb.c1.title': { en: 'Connect a provider', ru: 'Подключите провайдера' },
   'onb.c1.desc': {
@@ -1374,7 +1374,7 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     en: 'bring your keys — or let us handle it',
     ru: 'свои ключи — или доверьте всё нам',
   },
-  'pl.h1': { en: 'Two ways to use Stillside.', ru: 'Два способа пользоваться Stillside.' },
+  'pl.h1': { en: 'Two ways to use Retellis.', ru: 'Два способа пользоваться Retellis.' },
   'pl.p': {
     en: 'It’s always open-source. Bring your own API keys for free, or subscribe and we handle the keys, routing, and infra — you just talk.',
     ru: 'Это всегда открытый код. Подключите свои API-ключи бесплатно или оформите подписку — и мы берём ключи, маршрутизацию и инфраструктуру на себя. Вы просто разговариваете.',
@@ -1403,8 +1403,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'На этом экземпляре тарифы недоступны.',
   },
   'pl.unavail.p': {
-    en: 'This Stillside instance is self-hosted — it runs on your own API keys (BYOK) with no paid plans or checkout. Bring a key in onboarding to start.',
-    ru: 'Этот экземпляр Stillside — self-hosted: он работает на ваших собственных API-ключах (BYOK), без платных тарифов и оплаты. Добавьте ключ в онбординге, чтобы начать.',
+    en: 'This Retellis instance is self-hosted — it runs on your own API keys (BYOK) with no paid plans or checkout. Bring a key in onboarding to start.',
+    ru: 'Этот экземпляр Retellis — self-hosted: он работает на ваших собственных API-ключах (BYOK), без платных тарифов и оплаты. Добавьте ключ в онбординге, чтобы начать.',
   },
   'pl.unavail.cta': { en: 'Back to home', ru: 'На главную' },
 

@@ -1,4 +1,4 @@
-"""FastAPI entrypoint for the Stillside API.
+"""FastAPI entrypoint for the Retellis API.
 
 Phase 1 added ``/v1/health`` + the server X25519 session keypair. Phase 2 added
 the BYOK vault decrypt path, ``/v1/providers`` (key_handle only), and the
@@ -207,7 +207,7 @@ def create_app() -> FastAPI:
     validate_auth_config(settings)
 
     app = FastAPI(
-        title="Stillside API",
+        title="Retellis API",
         version="0.5.0",
         docs_url="/docs",
         redoc_url=None,

@@ -40,7 +40,7 @@ from .sessions import (
 
 router = APIRouter(tags=["auth"])
 
-_OIDC_STATE_COOKIE = "stillside_oidc_state"
+_OIDC_STATE_COOKIE = "retellis_oidc_state"
 _OIDC_STATE_TTL = 5 * 60
 
 
