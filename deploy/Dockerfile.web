@@ -22,6 +22,15 @@ COPY . .
 # (Caddy routes /v1 itself and the web proxy is never hit).
 ENV API_PROXY_TARGET=http://api:8000
 RUN pnpm --filter @ai-companion/web build
+# Precompress static build assets (gzip .gz siblings, originals kept) so Caddy
+# can serve them with Content-Length via `file_server { precompressed gzip }` —
+# avoiding the chunked stream that breaks over lossy client paths
+# (ERR_INCOMPLETE_CHUNKED_ENCODING). BusyBox gzip has no -k, so write .gz
+# explicitly. Already-compressed binaries (woff2/woff/png/jpg/etc.) are skipped.
+RUN cd apps/web/.next/static && \
+    find . -type f \( -name '*.js' -o -name '*.mjs' -o -name '*.css' \
+      -o -name '*.svg' -o -name '*.json' -o -name '*.wasm' -o -name '*.txt' \) \
+      -exec sh -c 'gzip -9c "$1" > "$1.gz"' _ {} \;
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -34,5 +43,10 @@ ENV HOSTNAME=0.0.0.0
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
+# Entrypoint syncs the precompressed static into the shared next_static volume
+# (Caddy serves it from there with Content-Length) before starting Next.js.
+COPY deploy/web-entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 EXPOSE 3000
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["node", "apps/web/server.js"]

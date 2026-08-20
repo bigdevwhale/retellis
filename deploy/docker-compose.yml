@@ -186,6 +186,11 @@ services:
     # Exposed for direct dev/debug only; the supported entry is Caddy on :80.
     ports:
       - "3000:3000"
+    volumes:
+      # Shared with caddy: the entrypoint copies the baked precompressed static
+      # here on each start so Caddy can serve /_next/static with Content-Length
+      # (precompressed gzip) instead of the chunked Next.js stream.
+      - next_static:/srv/static
 
   caddy:
     # Single-origin reverse proxy: TLS + /v1 → api, / → web. This is what makes
@@ -207,9 +212,13 @@ services:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+      # Precompressed static served directly by Caddy with Content-Length
+      # (precompressed gzip) to avoid chunked-stream tears over lossy paths.
+      - next_static:/srv/static:ro
 
 volumes:
   postgres_data:
   caddy_data:
   caddy_config:
   companion_data:
+  next_static:

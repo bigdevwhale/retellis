@@ -20,13 +20,12 @@
 }
 
 {$CADDY_SITE} {
-	encode zstd gzip
-
 	# API surface (incl. the /v1/llm/stream SSE). flush_interval -1 disables
 	# response buffering so streamed tokens reach the browser immediately; the
 	# extended read/write timeouts keep long turns from being cut off.
 	@api path /v1/*
 	handle @api {
+		encode zstd gzip
 		reverse_proxy api:8000 {
 			flush_interval -1
 			transport http {
@@ -36,8 +35,28 @@
 		}
 	}
 
+	# Static build assets — served directly from the shared next_static volume
+	# with precompressed gzip + Content-Length. Next.js standalone streams every
+	# response chunked (no Content-Length); over lossy client paths the chunked
+	# stream tears mid-transfer → ERR_INCOMPLETE_CHUNKED_ENCODING → ChunkLoadError
+	# → blank page. Serving precompressed files from disk gives a known
+	# Content-Length so there is nothing to tear. No `encode` here: precompressed
+	# sets Content-Encoding: gzip itself, and on-the-fly encode would reintroduce
+	# chunked for non-gzip/zstd clients.
+	@static path /_next/static/*
+	handle @static {
+		header Cache-Control "public, max-age=31536000, immutable"
+		header Vary Accept-Encoding
+		root * /srv/static
+		uri strip_prefix /_next/static
+		file_server {
+			precompressed gzip
+		}
+	}
+
 	# Everything else → the Next.js PWA (standalone server on :3000).
 	handle {
+		encode zstd gzip
 		reverse_proxy web:3000
 	}
 }
