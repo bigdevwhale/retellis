@@ -27,8 +27,13 @@ relayhost =
 
 # OpenDKIM milter (signs outgoing). milter_default_action=accept means a DKIM
 # failure degrades to UNSIGNED mail, never a blocked send — the mail flow is
-# not held hostage to the milter being healthy.
+# not held hostage to the milter being healthy. Short milter timeouts mean a
+# briefly-down milter (opendkim restarting) delays a send by seconds, not the
+# 30s default that would exceed the api's 15s SMTP timeout.
 milter_default_action = accept
+milter_connect_timeout = 5s
+milter_command_timeout = 5s
+milter_content_timeout = 10s
 non_smtpd_milters = inet:127.0.0.1:12345
 smtpd_milters = inet:127.0.0.1:12345
 
