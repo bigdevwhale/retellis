@@ -130,7 +130,7 @@ services:
       AUTH_EMAIL_TRANSPORT: ${AUTH_EMAIL_TRANSPORT:-console}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       # STARTTLS policy for the SMTP transport: ``required`` (default — external
