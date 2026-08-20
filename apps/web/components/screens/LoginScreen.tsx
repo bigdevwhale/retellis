@@ -11,7 +11,13 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { getAuthConfig, localLogin, localSignup, magicLinkRequest } from '@/lib/api-client';
+import {
+  getAuthConfig,
+  localLogin,
+  localSignup,
+  magicLinkRequest,
+  resendVerificationEmail,
+} from '@/lib/api-client';
 import { useLang } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
 
@@ -50,6 +56,14 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
+  // Soft email verification: after a local signup with the feature on, the
+  // session is already set but the user is unverified — show a "check your
+  // email" panel (Resend + Continue) instead of hard-navigating away. The
+  // user can continue into the app immediately (soft flow).
+  const [verifySent, setVerifySent] = useState(false);
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [resendBusy, setResendBusy] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   // Local-account form state.
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -85,6 +99,16 @@ export function LoginScreen() {
     try {
       if (mode === 'signup') {
         await localSignup({ email, password, display_name: name || undefined });
+        // Soft verification: when the feature is on, the account is created
+        // unverified and a link was emailed. The session is already set, so
+        // we *could* finish() — but first surface a "check your email" panel
+        // with a Resend + Continue. The user is not locked out.
+        if (config?.features.email_verification) {
+          setVerifyEmail(email);
+          setVerifySent(true);
+          setBusy(false);
+          return;
+        }
       } else {
         await localLogin({ email, password });
       }
@@ -116,6 +140,22 @@ export function LoginScreen() {
       setError(L2({ en: 'Could not send the sign-in link.', ru: 'Не удалось отправить ссылку.' }));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const onResend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResendBusy(true);
+    setResendDone(false);
+    try {
+      await resendVerificationEmail(verifyEmail);
+      setResendDone(true);
+    } catch {
+      // Non-enumerating endpoint; a failure here is config drift / network —
+      // surface a generic message rather than claiming a resend happened.
+      setError(L2({ en: 'Could not resend the link.', ru: 'Не удалось отправить ссылку снова.' }));
+    } finally {
+      setResendBusy(false);
     }
   };
 
@@ -247,88 +287,136 @@ export function LoginScreen() {
                               ru: 'Войти через локальный аккаунт',
                             })}
                       </p>
-                      <form onSubmit={onLocal}>
-                        {mode === 'signup' && (
-                          <div className="field">
-                            <label htmlFor="lo-name">
-                              {L2({ en: 'Display name', ru: 'Отображаемое имя' })}
-                            </label>
-                            <input
-                              id="lo-name"
-                              className="input"
-                              value={name}
-                              onChange={(e) => setName(e.target.value)}
-                              autoComplete="name"
-                              enterKeyHint="next"
-                              disabled={busy}
-                            />
-                          </div>
-                        )}
-                        <div className="field">
-                          <label htmlFor="lo-email">Email</label>
-                          <input
-                            id="lo-email"
-                            className="input"
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            autoComplete="email"
-                            inputMode="email"
-                            enterKeyHint="next"
-                            disabled={busy}
-                          />
-                        </div>
-                        <div className="field">
-                          <label htmlFor="lo-pw">{L2({ en: 'Password', ru: 'Пароль' })}</label>
-                          <input
-                            id="lo-pw"
-                            className="input"
-                            type="password"
-                            required
-                            minLength={8}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                            autoCapitalize="off"
-                            autoCorrect="off"
-                            spellCheck={false}
-                            enterKeyHint="go"
-                            disabled={busy}
-                          />
-                        </div>
-                        {error && (
-                          <div className="login-error" role="alert">
-                            {error}
-                          </div>
-                        )}
-                        <button type="submit" className="btn btn-primary" disabled={busy}>
-                          {mode === 'signup'
-                            ? L2({ en: 'Create account', ru: 'Создать аккаунт' })
-                            : L2({ en: 'Sign in', ru: 'Войти' })}
-                        </button>
-                      </form>
-                      <button
-                        type="button"
-                        className="login-toggle"
-                        onClick={() => {
-                          setMode((m) => (m === 'login' ? 'signup' : 'login'));
-                          setError(null);
-                        }}
-                      >
-                        {mode === 'login'
-                          ? L2({ en: 'No account? Sign up', ru: 'Нет аккаунта? Создать' })
-                          : L2({
-                              en: 'Already have an account? Sign in',
-                              ru: 'Уже есть аккаунт? Войти',
+                      {verifySent ? (
+                        <div className="login-verify-panel">
+                          <p className="login-note">
+                            {L2({
+                              en: `We sent a verification link to ${verifyEmail}. Click it to confirm your email.`,
+                              ru: `Мы отправили ссылку для подтверждения на ${verifyEmail}. Перейдите по ней, чтобы подтвердить почту.`,
                             })}
-                      </button>
-                      <p className="login-note">
-                        {L2({
-                          en: 'Your login password is separate from your BYOK API key, which is added after sign-in.',
-                          ru: 'Пароль входа отдельно от вашего ключа API BYOK, который добавляется после входа.',
-                        })}
-                      </p>
+                          </p>
+                          {resendDone && (
+                            // biome-ignore lint/a11y/useSemanticElements: role="status" announces the resend result to AT as a polite live region.
+                            <p className="login-note" role="status">
+                              {L2({
+                                en: 'Sent another link. Check your inbox.',
+                                ru: 'Отправили ещё одну ссылку. Проверьте почту.',
+                              })}
+                            </p>
+                          )}
+                          {error && (
+                            <div className="login-error" role="alert">
+                              {error}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={onResend}
+                            disabled={resendBusy}
+                          >
+                            {resendBusy
+                              ? L2({ en: 'Sending…', ru: 'Отправка…' })
+                              : L2({ en: 'Resend link', ru: 'Отправить снова' })}
+                          </button>
+                          <button type="button" className="btn btn-primary" onClick={finish}>
+                            {L2({ en: 'Continue →', ru: 'Продолжить →' })}
+                          </button>
+                          <p className="login-note">
+                            {L2({
+                              en: 'You can use Retellis now — verifying just confirms the email is yours.',
+                              ru: 'Вы можете пользоваться Retellis уже сейчас — подтверждение лишь проверяет, что почта ваша.',
+                            })}
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          <form onSubmit={onLocal}>
+                            {mode === 'signup' && (
+                              <div className="field">
+                                <label htmlFor="lo-name">
+                                  {L2({ en: 'Display name', ru: 'Отображаемое имя' })}
+                                </label>
+                                <input
+                                  id="lo-name"
+                                  className="input"
+                                  value={name}
+                                  onChange={(e) => setName(e.target.value)}
+                                  autoComplete="name"
+                                  enterKeyHint="next"
+                                  disabled={busy}
+                                />
+                              </div>
+                            )}
+                            <div className="field">
+                              <label htmlFor="lo-email">Email</label>
+                              <input
+                                id="lo-email"
+                                className="input"
+                                type="email"
+                                required
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="email"
+                                inputMode="email"
+                                enterKeyHint="next"
+                                disabled={busy}
+                              />
+                            </div>
+                            <div className="field">
+                              <label htmlFor="lo-pw">{L2({ en: 'Password', ru: 'Пароль' })}</label>
+                              <input
+                                id="lo-pw"
+                                className="input"
+                                type="password"
+                                required
+                                minLength={8}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                autoComplete={
+                                  mode === 'signup' ? 'new-password' : 'current-password'
+                                }
+                                autoCapitalize="off"
+                                autoCorrect="off"
+                                spellCheck={false}
+                                enterKeyHint="go"
+                                disabled={busy}
+                              />
+                            </div>
+                            {error && (
+                              <div className="login-error" role="alert">
+                                {error}
+                              </div>
+                            )}
+                            <button type="submit" className="btn btn-primary" disabled={busy}>
+                              {mode === 'signup'
+                                ? L2({ en: 'Create account', ru: 'Создать аккаунт' })
+                                : L2({ en: 'Sign in', ru: 'Войти' })}
+                            </button>
+                          </form>
+                          <button
+                            type="button"
+                            className="login-toggle"
+                            onClick={() => {
+                              setMode((m) => (m === 'login' ? 'signup' : 'login'));
+                              setError(null);
+                            }}
+                          >
+                            {mode === 'login'
+                              ? L2({ en: 'No account? Sign up', ru: 'Нет аккаунта? Создать' })
+                              : L2({
+                                  en: 'Already have an account? Sign in',
+                                  ru: 'Уже есть аккаунт? Войти',
+                                })}
+                          </button>
+                          <p className="login-note">
+                            {L2({
+                              en: 'Your login password is separate from your BYOK API key, which is added after sign-in.',
+                              ru: 'Пароль входа отдельно от вашего ключа API BYOK, который добавляется после входа.',
+                            })}
+                          </p>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

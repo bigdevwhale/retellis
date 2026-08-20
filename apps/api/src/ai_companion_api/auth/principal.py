@@ -24,6 +24,7 @@ def principal_from_user(user: UserRecord, backend: str) -> Principal:
         auth_backend=backend,
         family_id=user.family_id,
         family_role=user.family_role,  # type: ignore[arg-type]
+        email_verified=user.email_verified,
     )
 
 

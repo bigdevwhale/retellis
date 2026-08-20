@@ -58,6 +58,7 @@ vi.mock('../lib/api-client', async () => {
         credits: true,
         hosted_fallback: false,
         magic_links: false,
+        email_verification: false,
         journal: true,
         shares: true,
       },

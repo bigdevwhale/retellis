@@ -126,6 +126,21 @@ class Settings(BaseSettings):
     smtp_username: str = ""
     smtp_password: str = ""
     smtp_from: str = ""
+    # STARTTLS policy for the SMTP transport: ``required`` (default — always
+    # upgrade, for external providers like Gmail/Mailgun on 587), ``if_supported``
+    # (upgrade only when the server advertises STARTTLS), or ``never`` (plain
+    # SMTP — for an internal postfix relay on port 25 with no TLS cert). Port 465
+    # is implicit TLS (SMTPS) and ignores this setting.
+    smtp_starttls: str = "required"
+    # Email verification (local-account signup). When feature_email_verification
+    # is on, new local signups start email_verified=false and a verification
+    # link is emailed; bootstrap requires auth_email_transport == "smtp" and a
+    # signing secret. Falls back to auth_magic_link_secret when this is empty so an
+    # operator who already set one secret is covered. Never logged.
+    auth_email_verification_secret: str = ""
+    # Verification-link TTL (longer than magic-link's 15 min — verification is
+    # less urgent and the user may click hours later).
+    auth_email_verification_ttl_seconds: int = 24 * 60 * 60
 
     # --- OIDC backend config (auth_backend == oidc) ---
     oidc_issuer: str = ""
@@ -156,6 +171,11 @@ class Settings(BaseSettings):
     feature_credits: bool = False
     feature_hosted_fallback: bool = False
     feature_magic_links: bool = False
+    # Email verification on local-account signup (soft — session is still issued
+    # immediately; the flag enables the unverified-start + verification email).
+    # Bootstrap rejects enabling it unless AUTH_BACKEND=local + SMTP transport +
+    # a signing secret. Default off → no behavior change for existing deployments.
+    feature_email_verification: bool = False
 
     # --- Billing (hosted-only; gated `feature_billing and is_hosted`) ---
     # Two providers cover two geographies: Paddle (Merchant of Record) for

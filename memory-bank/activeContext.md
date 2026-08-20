@@ -1,6 +1,25 @@
 # Active Context — Retellis
 
-*Current focus, recent decisions, next steps. Update this file after every significant work session. Last updated: 2026-07-27 (UX de-technicalization — 10 ranked fixes + brand-contract disclosure relocation).*
+*Current focus, recent decisions, next steps. Update this file after every significant work session. Last updated: 2026-08-20 (email verification for local-account signup).*
+
+## Email verification for local-account signup (2026-08-20)
+
+Implemented **soft, opt-in email verification** on the local-signup flow (the server's default `AUTH_BACKEND=local`). Reuses magic-link primitives (HMAC `seal`/`open_sealed` + `default_transport`) — nothing new invented.
+
+**Scope decisions (user-chosen via AskUserQuestion):** *soft* (session issued immediately, banner + resend, no backend gating); *email-only* (no password-confirmation field / password policy this pass); *feature-flagged* (`FEATURE_EMAIL_VERIFICATION` default **off**, bootstrap rejects enabling unless `AUTH_BACKEND=local` + `AUTH_EMAIL_TRANSPORT=smtp` + a signing secret).
+
+**Flow (flag on):** signup creates `email_verified=false` + issues session (soft) + emails a sealed-token link; `GET /v1/auth/verify-email?token=…` (public click-through) opens the token → `set_email_verified` → 303 home (or `/?verify=failed` on invalid/expired/no-user); `POST /v1/auth/verify-email/resend` (public, rate-limited, non-enumerating `{email}` → always `{ok:true}`). Flag off → **identical to today** (`email_verified=true` at signup, endpoints 404, no email).
+
+**Files:**
+- Contracts: `Principal.email_verified` (default `true`), `FeatureFlags.email_verification` (default `false`), new `ResendVerificationRequest` — pydantic + zod + both REGISTRY maps. 46-model parity.
+- Backend: `config.py` (`feature_email_verification`, `auth_email_verification_secret`, `auth_email_verification_ttl_seconds=24h`); `auth/store.py` (`UserRecord.email_verified`/`email_verified_at`, `create_user` kwarg, `set_email_verified` on Protocol/InMemory/Postgres, `_row_to_user`); `db/models.py` (User columns); migration `0025_email_verification.py` (`email_verified BOOLEAN NOT NULL DEFAULT TRUE` backfills existing rows as trusted; `email_verified_at TIMESTAMPTZ NULL`); `auth/principal.py` (`email_verified=user.email_verified`); new `auth/email_verification.py` (`issue_token`/`verify_token`/`verify_url`/`send_verification_email` — secret falls back to `auth_magic_link_secret`); `auth/backends/local.py` (signup: `email_verified=not flag`, best-effort send that never fails signup); `auth/backends/magic_link.py` (`EmailTransport.send` gains optional `subject` — backward-compatible); `auth/router.py` (`verify-email` GET + `resend` POST); `auth/middleware.py` (public paths); `auth/bootstrap.py` (validation matrix + `FeatureFlags.email_verification`).
+- Frontend: `lib/api-client.ts` (`resendVerificationEmail`); `components/screens/LoginScreen.tsx` (post-signup "check your email" panel with Resend + Continue, mirrors `magicSent`); new `components/EmailVerifyBanner.tsx` (app-shell dismissable banner + one-shot `?verify=failed` toast, ref-guard so lang toggle doesn't re-toast); `components/AppShell.tsx` (renders banner in landing + rail shells in Suspense); `app/globals.css` (`.btn-secondary`, `.login-verify-panel`, `.verify-banner*`).
+
+**Verification:** `pnpm contracts:check` OK (46 parity); `pnpm typecheck` clean; `ruff check apps/api` clean; `pnpm lint` — 17 pre-existing a11y errors on untouched files, **0 in my files**; API pytest **582 passed** (+13 new `test_email_verification.py`), 5 pre-existing test-isolation failures in `test_routing`/`test_provider_chain_bedrock` (confirmed identical on clean tree via `git stash` — not regressions); web vitest **183 passed** (30 files). Migration chain 0024→0025 verified (single, no branch; `alembic upgrade head` runs in Docker — psycopg not installed locally). graphify graph updated.
+
+**Deploy note:** on the live server (`retellis.com`, `AUTH_BACKEND=local`) the flag stays off → **no behavior change**. To enable: `FEATURE_EMAIL_VERIFICATION=1` + `AUTH_EMAIL_TRANSPORT=smtp` + `SMTP_*` + `AUTH_EMAIL_VERIFICATION_SECRET=<hex>` (or reuse `AUTH_MAGIC_LINK_SECRET`) in `.env`, recreate `api`. Existing users backfilled `email_verified=true` by the migration default.
+
+**Deferred:** password-confirmation field + server-side password policy; forgot-password / reset flow (verification is the prerequisite); one-time consumed-token semantics (idempotent within TTL, same as documented magic-link follow-up); gating any endpoint on `email_verified` (soft by decision).
 
 ## UX de-technicalization — 10 fixes landed (2026-07-27)
 

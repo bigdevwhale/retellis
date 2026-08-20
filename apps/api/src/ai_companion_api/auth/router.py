@@ -17,6 +17,7 @@ from ai_companion_contracts import (
     LocalSignupRequest,
     MagicLinkRequest,
     Principal,
+    ResendVerificationRequest,
     SessionInfo,
 )
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -29,6 +30,7 @@ from .backends.local import LocalAccountsBackend
 from .backends.magic_link import MagicLinkBackend
 from .backends.oidc import OIDCBackend
 from .bootstrap import build_auth_config
+from .email_verification import send_verification_email, verify_token
 from .principal import principal_from_user
 from .sessions import (
     clear_session_cookie,
@@ -214,6 +216,61 @@ async def magiclink_verify(request: Request, token: str = Query(...)) -> Redirec
     resp = RedirectResponse(home, status_code=303)
     set_session_cookie(resp, session_token, settings)
     return resp
+
+
+# --- email verification (local backend, FEATURE_EMAIL_VERIFICATION) ---
+
+
+def _verify_email_enabled(settings: Settings) -> bool:
+    """The flow is local-only + flag-gated. Off → endpoints 404 (no behavior
+    change for deployments that never turned the flag on)."""
+    return settings.auth_backend == "local" and settings.feature_email_verification
+
+
+@router.post("/auth/verify-email/resend")
+@limiter.limit("10/minute")
+async def resend_verification(body: ResendVerificationRequest, request: Request) -> JSONResponse:
+    # _require_backend gives a 404 for non-local deployments (the flow is local
+    # only); the flag check 404s when the operator never enabled verification.
+    _require_backend(request, "local")
+    settings = _settings(request)
+    if not _verify_email_enabled(settings):
+        raise HTTPException(status_code=404, detail="email verification is not enabled")
+    # send_verification_email no-ops for unknown / already-verified / non-local
+    # accounts, so this acks uniformly without revealing account state. A
+    # transport failure (SMTP down) is swallowed + logged to preserve the
+    # non-enumerating contract — surfacing it would let a probe distinguish
+    # "known unverified (send attempted)" from "unknown (no send)".
+    try:
+        await send_verification_email(settings, request.app.state.auth_store, body.email)
+    except Exception:  # noqa: BLE001 — never enumerate; log for diagnosability
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "verification resend transport failed; returning non-enumerating ok"
+        )
+    return JSONResponse({"ok": True})
+
+
+@router.get("/auth/verify-email")
+@limiter.limit("30/minute")
+async def verify_email(request: Request, token: str = Query(...)) -> RedirectResponse:
+    _require_backend(request, "local")
+    settings = _settings(request)
+    if not _verify_email_enabled(settings):
+        raise HTTPException(status_code=404, detail="email verification is not enabled")
+    home = settings.public_origin.rstrip("/") + "/"
+    failed = settings.public_origin.rstrip("/") + "/?verify=failed"
+    email = verify_token(settings, token)
+    if email:
+        user = await request.app.state.auth_store.get_user_by_email(email)
+        # Only flip a local account the server actually has. A token for a
+        # since-deleted or non-local user → failed redirect (no enumeration
+        # risk: the token is signed and single-recipient).
+        if user is not None and user.issuer == "local":
+            await request.app.state.auth_store.set_email_verified(user_id=user.id)
+            return RedirectResponse(home, status_code=303)
+    return RedirectResponse(failed, status_code=303)
 
 
 # --- shared ---

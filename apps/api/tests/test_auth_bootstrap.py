@@ -1,8 +1,9 @@
 """Boot-time mode→backend matrix validation.
 
-Enforces the "for local, only local accounts" rule symmetrically: self-hosted
-local profile ⇒ local only; self-hosted sso ⇒ oidc/trusted_header/magic_link;
-hosted ⇒ oidc/magic_link (local forbidden). Plus per-backend prerequisites.
+Enforces the mode→backend matrix: self-hosted local profile ⇒ local only;
+self-hosted sso ⇒ oidc/trusted_header/magic_link; hosted ⇒ local/oidc/magic_link
+(local is allowed so a hosted SaaS can run its own email+password registration
+with email verification). Plus per-backend prerequisites.
 """
 
 from __future__ import annotations
@@ -72,10 +73,18 @@ def test_self_hosted_sso_rejects_local(monkeypatch):
         validate_auth_config(s)
 
 
-def test_hosted_rejects_local(monkeypatch):
-    s = _settings(monkeypatch, DEPLOYMENT_MODE="hosted", AUTH_BACKEND="local")
-    with pytest.raises(AuthConfigError, match="not allowed"):
-        validate_auth_config(s)
+def test_hosted_allows_local(monkeypatch):
+    """A hosted SaaS may run its own email+password registration (Argon2id-hashed,
+    same as self-hosted local) — e.g. to keep the local-signup email-verification
+    flow on a prod instance. The matrix allows it; the https-origin and
+    insecure-header hosted guards still apply."""
+    s = _settings(
+        monkeypatch,
+        DEPLOYMENT_MODE="hosted",
+        AUTH_BACKEND="local",
+        PUBLIC_ORIGIN="https://app.example.com",
+    )
+    assert validate_auth_config(s) == ("hosted", None, "local")
 
 
 def test_hosted_allows_oidc(monkeypatch):

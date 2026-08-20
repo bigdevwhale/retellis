@@ -1110,13 +1110,27 @@ async def _stream(
     # ``routing/entitlement.py`` for the plan-string discriminator.
     subscriber = is_paid_subscriber(principal, settings)
     gate_reason = None
+    keep_byok = False  # out-of-credits exempts BYOK (the user's own key costs the operator nothing)
     if budget.hard_stop and not subscriber:
         gate_reason = "budget hard-stop (monthly cap reached)"
     elif out_of_credits:
         gate_reason = "out of credits"
+        # Credits are the user's prepaid balance for operator-provided providers.
+        # BYOK is the user's own key — it consumes no operator credits, so the
+        # credits gate must not cut it: keep BYOK (+ mock as the safety net) and
+        # paywall only operator-provided env-fallback / Ollama nodes. A free
+        # hosted user with their own key keeps working; only env-fallback is
+        # gated. (The budget hard-stop above is unchanged — it is the operator's
+        # global monthly cap, a separate concern.)
+        keep_byok = True
+    cut_to_mock = False
     if gate_reason is not None:
-        run_cands = [c for c in cands if c.is_mock]
-        if first_real is not None:
+        run_cands = [c for c in cands if c.is_mock or (keep_byok and c.decrypted is not None)]
+        # The turn is only forced to mock when no BYOK candidate survives the
+        # gate. When BYOK survives it serves the turn (mock is just the safety
+        # net), so no gate→mock fallback is emitted or recorded.
+        cut_to_mock = not any(c.decrypted is not None for c in run_cands)
+        if cut_to_mock and first_real is not None:
             record_fallback(user_id, f"{first_real.kind} → mock ({gate_reason})")
 
     assistant_text = ""
@@ -1128,8 +1142,10 @@ async def _stream(
 
     async def drive() -> AsyncIterator[tuple[str, object]]:
         nonlocal served
-        # Emit the gate fallback once, before the mock runs.
-        if gate_reason is not None and first_real is not None:
+        # Emit the gate→mock fallback once, before the mock runs — only when a
+        # real provider was actually cut to mock (no BYOK kept). When BYOK
+        # survives the gate it serves the turn, so no gate fallback is emitted.
+        if gate_reason is not None and cut_to_mock and first_real is not None:
             yield ("fallback", (first_real.kind, "mock", gate_reason))
         async for tag, val in run_with_fallback(run_cands, messages, user_id=user_id):
             if tag == "served":

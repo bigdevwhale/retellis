@@ -428,6 +428,11 @@ class Principal(BaseModel):
     # meaningful when family_id is set. Each user is in at most one family.
     family_id: str | None = None
     family_role: Literal["owner", "member"] | None = None
+    # Whether the user has confirmed ownership of their email. True for OIDC
+    # (verified by the IdP) and magic-link (verified by link possession); for
+    # local accounts it is True by default and False only when email
+    # verification is enabled (FEATURE_EMAIL_VERIFICATION) and not yet completed.
+    email_verified: bool = True
 
 
 class SessionInfo(BaseModel):
@@ -571,6 +576,8 @@ class FeatureFlags(BaseModel):
     # BYOK-or-mock.
     hosted_fallback: bool = False
     magic_links: bool = False
+    # Email verification on local-account signup (requires SMTP). Off by default.
+    email_verification: bool = False
     journal: bool = True
     shares: bool = True
 
@@ -602,6 +609,14 @@ class LocalLoginRequest(BaseModel):
 
 
 class MagicLinkRequest(BaseModel):
+    email: str
+
+
+class ResendVerificationRequest(BaseModel):
+    """Body for ``POST /v1/auth/verify-email/resend`` — re-sends the email
+    verification link. The endpoint always acks ``{"ok": true}`` (non-enumerating:
+    it never reveals whether the email has an account or is already verified)."""
+
     email: str
 
 

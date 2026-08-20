@@ -46,6 +46,9 @@ _PUBLIC_GET: frozenset[str] = frozenset(
         "/v1/auth/begin",
         "/v1/auth/callback",
         "/v1/auth/magiclink/verify",
+        # Email verification click-through — GET from the email link, like
+        # magiclink/verify. Local-only + flag-gated; 404s when disabled.
+        "/v1/auth/verify-email",
         # Billing plan catalogue — public so an anonymous visitor can see
         # prices/credits before signing in. Checkout/portal/subscription still
         # require a Principal; the webhooks are public POST (signature-gated).
@@ -69,6 +72,9 @@ _PUBLIC_POST: frozenset[str] = frozenset(
         "/v1/auth/login",
         "/v1/auth/magiclink",
         "/v1/auth/logout",
+        # Email verification resend — unauthed (the user may be logged out on
+        # another device). Non-enumerating; flag-gated → 404 when disabled.
+        "/v1/auth/verify-email/resend",
         # Billing provider webhooks — unauthenticated here (signature verified
         # inside the handler, the ONLY auth on these routes). Paddle posts an
         # HMAC-signed body; ЮKassa posts a notification we re-verify by fetching

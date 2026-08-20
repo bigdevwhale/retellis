@@ -63,6 +63,8 @@ async def test_signup_login_me_logout(make_app, app_client):
         assert principal["email"] == "alice@example.com"  # normalized
         assert principal["auth_backend"] == "local"
         assert principal["plan"] == "self_hosted_free"
+        # FEATURE_EMAIL_VERIFICATION off (default) → signup is trusted immediately.
+        assert principal["email_verified"] is True
         assert "retellis_sess" in ac.cookies
 
         # The session cookie authorizes protected routes.

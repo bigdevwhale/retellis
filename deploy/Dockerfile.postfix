@@ -1,0 +1,21 @@
+# Send-only Postfix + OpenDKIM relay for the Retellis compose stack.
+#
+# Listens on port 25 INSIDE the compose network (the service publishes no host
+# ports, so the open-relay surface is limited to other containers on the same
+# network — the api container is the only client). The api submits mail with
+# SMTP_STARTTLS=never + no auth (internal relay). OpenDKIM signs outgoing mail
+# for retellis.com; if the milter is unavailable Postfix still accepts and sends
+# unsigned (milter_default_action=accept), so a DKIM failure never blocks the
+# mail flow. The entrypoint generates a DKIM keypair on first start and prints
+# the public-key TXT record to add to DNS.
+FROM debian:stable-slim
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      postfix opendkim opendkim-tools ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+COPY deploy/postfix/main.cf /etc/postfix/main.cf
+COPY deploy/postfix/opendkim.conf /etc/opendkim.conf
+COPY deploy/postfix/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+EXPOSE 25
+CMD ["/entrypoint.sh"]

@@ -10,10 +10,22 @@ turn.
 
 from __future__ import annotations
 
+import base64
 import json
 import urllib.parse
 
+from nacl.public import PublicKey, SealedBox
+
 from ai_companion_api.auth.backends.magic_link import MagicLinkBackend
+
+
+def _seal_key(payload: dict, pub_b64: str) -> str:
+    """ECDH-seal a key JSON payload to the server session pubkey (libsodium
+    ``crypto_box_seal`` — the same primitive the client uses at onboarding)."""
+    pub = PublicKey(base64.b64decode(pub_b64))
+    return base64.b64encode(SealedBox(pub).encrypt(json.dumps(payload).encode("utf-8"))).decode(
+        "ascii"
+    )
 
 
 class _CaptureTransport:
@@ -101,3 +113,74 @@ async def test_self_hosted_ignores_credits(make_app, app_client):
         )
         fallbacks = [e for e in events if e["type"] == "fallback"]
         assert not any(f["reason"] == "out of credits" for f in fallbacks)
+
+
+async def test_out_of_credits_keeps_byok(make_app, app_client, monkeypatch):
+    """A free hosted user (credits=0) with their own BYOK key is NOT cut to mock.
+
+    The credits gate paywalls only operator-provided env-fallback / Ollama nodes —
+    BYOK is the user's own key and consumes no operator credits, so it must keep
+    working. BYOK serves the turn and no 'out of credits' gate fallback is emitted.
+    (Contrast ``test_out_of_credits_gates_real_provider`` above: that user has no
+    BYOK key, so env-fallback is dropped and mock serves.)"""
+    from ai_companion_api.llm.litellm_adapter import LiteLLMAdapter
+    from ai_companion_api.llm.types import LlmUsage
+
+    async def _fake_stream(self, messages, model):  # noqa: ANN001
+        # Avoid litellm / any network: yield one canned token + populate usage so
+        # the turn completes on BYOK without a real provider call.
+        yield "ok"
+        self._usage = LlmUsage(self.provider_kind, model, 1, 1, 0.0)
+
+    monkeypatch.setattr(LiteLLMAdapter, "stream", _fake_stream)
+
+    dek = base64.b64encode(b"k" * 32).decode()
+    app = make_app(
+        DEPLOYMENT_MODE="hosted",
+        AUTH_BACKEND="local",
+        HOSTED_SIGNUP_CREDITS_USD="0",
+        PUBLIC_ORIGIN="https://app.example.com",
+        MESSENGER_TOKEN_DEK=dek,
+        # No env-fallback key → the only real candidate is the user's BYOK key.
+        MONTHLY_BUDGET_USD="1000",
+    )
+    async with app_client(app, base_url="https://test") as ac:
+        await ac.post("/v1/auth/signup", json={"email": "h@x.com", "password": "pwaaaaaaaaaa"})
+        me = await ac.get("/v1/auth/me")
+        assert me.json()["credits_usd"] == 0
+        assert me.json()["plan"] == "hosted_free"
+
+        # Store a BYOK provider key (ECDH-sealed once → server envelope-encrypts it).
+        pub_b64 = (await ac.get("/v1/health")).json()["ecdh_pub"]
+        blob = _seal_key(
+            {"provider_kind": "openai", "api_key": "sk-byok-test-1234567890", "base_url": None},
+            pub_b64,
+        )
+        r = await ac.post(
+            "/v1/providers",
+            json={"kind": "openai", "label": "Mine", "key_handle": "kh-1", "enc_key_blob": blob},
+        )
+        assert r.status_code == 200, r.text
+
+        # New-client per-turn path: enc_key_blob=None + key_handle → resolve from
+        # the envelope store. The gate keeps BYOK (credits=0 doesn't cut it).
+        events = await _read_events(
+            ac,
+            {
+                "persona_id": "lou",
+                "convo_id": "c1",
+                "message": "hi",
+                "memory_on": False,
+                "key_handle": "kh-1",
+                "enc_key_blob": None,
+            },
+        )
+        types = [e["type"] for e in events]
+        assert types[0] == "session"
+        assert types[-1] == "done"
+        fallbacks = [e for e in events if e["type"] == "fallback"]
+        assert not any(f["reason"] == "out of credits" for f in fallbacks), events
+        # BYOK served the turn (not mock).
+        usage = next(e for e in events if e["type"] == "usage")
+        assert usage["provider_kind"] == "openai"
+        assert "".join(e["text"] for e in events if e["type"] == "token").strip() == "ok"

@@ -599,6 +599,21 @@ export function logout(): Promise<void> {
   return jsonFetch<void>('/v1/auth/logout', { method: 'POST' });
 }
 
+/**
+ * Re-send the email-verification link. Non-enumerating: the server acks
+ * `{ok:true}` for any email (unknown / already-verified / non-local all
+ * no-op server-side), so this never reveals account state. 404 when the
+ * deployment has FEATURE_EMAIL_VERIFICATION off (the UI only offers this
+ * when `config.features.email_verification` is on, so a 404 here is a
+ * config drift / stale-session case — surface it as a generic error).
+ */
+export function resendVerificationEmail(email: string): Promise<{ ok: boolean }> {
+  return jsonFetch<{ ok: boolean }>('/v1/auth/verify-email/resend', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
 // --- Session management (M2: active devices) ---
 //
 // The session token (cookie value, a secret) is never surfaced — the list keys

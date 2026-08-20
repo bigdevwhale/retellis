@@ -1,11 +1,16 @@
 """Deployment mode + auth-backend enums and the boot-time validity matrix.
 
-The matrix encodes the "for local, only local accounts" rule symmetrically so the
-SaaS never runs a self-managed password store::
+The matrix encodes which auth backends each deployment mode/profile may run::
 
     self_hosted + local profile  → local only
     self_hosted + sso   profile  → oidc / trusted_header / magic_link
-    hosted                       → oidc / magic_link  (local forbidden)
+    hosted                       → local / oidc / magic_link
+
+``hosted`` allows ``local`` so an operator can run a hosted SaaS with its own
+email+password registration (Argon2id-hashed, same as self-hosted local) — e.g. to
+keep the local-signup email-verification flow on a prod instance. OIDC/magic-link
+remain the passwordless alternatives. ``trusted_header`` is not offered in
+hosted (it assumes an internal-network auth proxy, not a public SaaS).
 
 ``bootstrap.validate_auth_config`` enforces it at startup (fail fast, no silent
 fallback) and is unit-tested in ``tests/test_auth_bootstrap.py``.
@@ -46,7 +51,7 @@ ALLOWED_BACKENDS: dict[tuple[str, str | None], frozenset[str]] = {
         }
     ),
     (DeploymentMode.hosted.value, None): frozenset(
-        {AuthBackendKind.oidc.value, AuthBackendKind.magic_link.value}
+        {AuthBackendKind.local.value, AuthBackendKind.oidc.value, AuthBackendKind.magic_link.value}
     ),
 }
 

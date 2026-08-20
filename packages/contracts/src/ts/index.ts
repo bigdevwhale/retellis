@@ -359,6 +359,11 @@ export const Principal = z.object({
   // meaningful when family_id is set. Each user is in at most one family.
   family_id: z.string().nullable().nullish(),
   family_role: z.enum(['owner', 'member']).nullish(),
+  // Whether the user has confirmed ownership of their email. True for OIDC
+  // (verified by the IdP) and magic-link (verified by link possession); for
+  // local accounts it is True by default and False only when email
+  // verification is enabled (FEATURE_EMAIL_VERIFICATION) and not yet completed.
+  email_verified: z.boolean().default(true),
 });
 export type Principal = z.infer<typeof Principal>;
 
@@ -468,6 +473,8 @@ export const FeatureFlags = z.object({
   // BYOK-or-mock.
   hosted_fallback: z.boolean().default(false),
   magic_links: z.boolean().default(false),
+  // Email verification on local-account signup (requires SMTP). Off by default.
+  email_verification: z.boolean().default(false),
   journal: z.boolean().default(true),
   shares: z.boolean().default(true),
 });
@@ -503,6 +510,12 @@ export type LocalLoginRequest = z.infer<typeof LocalLoginRequest>;
 
 export const MagicLinkRequest = z.object({ email: z.string() });
 export type MagicLinkRequest = z.infer<typeof MagicLinkRequest>;
+
+// Body for POST /v1/auth/verify-email/resend. The endpoint always acks
+// {"ok": true} (non-enumerating: never reveals whether the email has an
+// account or is already verified).
+export const ResendVerificationRequest = z.object({ email: z.string() });
+export type ResendVerificationRequest = z.infer<typeof ResendVerificationRequest>;
 
 // --- Billing (subscription purchase) ---
 //
@@ -715,6 +728,7 @@ export const REGISTRY = {
   LocalSignupRequest,
   LocalLoginRequest,
   MagicLinkRequest,
+  ResendVerificationRequest,
   SessionInfo,
   Plan,
   Subscription,

@@ -94,6 +94,31 @@ def validate_auth_config(settings: Settings) -> tuple[str, str | None, str]:
             raise AuthConfigError("AUTH_BACKEND=magic_link requires AUTH_EMAIL_TRANSPORT != off.")
     # local: no prerequisites (zero-config, zero external deps).
 
+    # Email verification is a local-signup flow: the user proves email
+    # ownership by clicking a signed link. OIDC/magic-link already prove it
+    # (IdP-verified email / link possession), so the flow is local-only. It
+    # also needs a real transport (console/off don't deliver mail) and a
+    # signing secret for the sealed token. Refuse to boot rather than silently
+    # advertising verification the deployment can't perform ("disclose, don't
+    # perform"). The secret falls back to AUTH_MAGIC_LINK_SECRET so an operator
+    # who set one secret is covered.
+    if settings.feature_email_verification:
+        if backend != AuthBackendKind.local.value:
+            raise AuthConfigError(
+                "FEATURE_EMAIL_VERIFICATION=1 requires AUTH_BACKEND=local "
+                "(OIDC/magic-link prove email ownership their own way)."
+            )
+        if settings.auth_email_transport != "smtp":
+            raise AuthConfigError(
+                "FEATURE_EMAIL_VERIFICATION=1 requires AUTH_EMAIL_TRANSPORT=smtp "
+                "(console/off don't deliver verification mail)."
+            )
+        if not (settings.auth_email_verification_secret or settings.auth_magic_link_secret):
+            raise AuthConfigError(
+                "FEATURE_EMAIL_VERIFICATION=1 requires a signing secret: set "
+                "AUTH_EMAIL_VERIFICATION_SECRET (or AUTH_MAGIC_LINK_SECRET, used as fallback)."
+            )
+
     # Hosted is multi-user SaaS served over the public internet: the session
     # cookie is only Secure (and thus safe over plaintext hops) when the origin
     # is https. ``auth/sessions.cookie_secure`` already returns False for an
@@ -147,6 +172,9 @@ def build_auth_config(settings: Settings) -> AuthConfig:
         hosted_fallback=settings.feature_hosted_fallback and is_hosted,
         magic_links=(backend == AuthBackendKind.magic_link.value)
         or (settings.feature_magic_links and is_hosted),
+        # Email verification is local-only; the flag is the single switch (no
+        # hosted gating — a self-hosted operator may want it too).
+        email_verification=settings.feature_email_verification,
         journal=True,
         shares=True,
     )

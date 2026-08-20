@@ -418,6 +418,16 @@ h4 {
   line-height: 1.5;
   margin: 10px 0 0;
 }
+/* Post-signup "check your email" panel (soft verification). Mirrors the
+   magic-link sent state: replaces the form with a notice + Resend/Continue. */
+.login-verify-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.login-verify-panel .login-note {
+  margin: 0;
+}
 
 /* Footer — Home link + a quiet descriptor. */
 .login-foot {
@@ -1542,6 +1552,24 @@ main {
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--purple-hover), var(--purple));
   border-color: transparent;
+}
+/* Secondary action — a quiet outline button for non-primary affordances
+   (e.g. the Resend button next to a primary Continue). */
+.btn-secondary {
+  background: transparent;
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 30%, var(--border));
+}
+.btn-secondary:hover {
+  background: var(--purple-tint);
+  color: var(--purple-hover);
+  border-color: var(--purple);
+}
+.btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 /* Light theme: the default #533afd -> #3a1fb0 gradient is too heavy on the
    cream background. Lift the endpoints to a lighter violet so primary actions
@@ -7172,6 +7200,59 @@ table.rt td .mono {
   gap: 8px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+/* Soft email-verification banner — a slim, dismissable reminder shown above the
+   screen content for signed-in unverified users (FEATURE_EMAIL_VERIFICATION).
+   Not a gate — purely a nudge + Resend. */
+.verify-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 14px;
+  margin: 0 0 12px;
+  border-radius: var(--r);
+  border: 1px solid color-mix(in srgb, var(--purple) 28%, var(--border));
+  background: var(--purple-tint);
+  color: var(--heading);
+  font-size: 13px;
+}
+.verify-banner-msg {
+  flex: 1;
+}
+.verify-banner-action {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, var(--purple) 40%, transparent);
+  background: transparent;
+  color: var(--purple);
+  font-family: var(--font);
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s var(--ease);
+}
+.verify-banner-action:hover {
+  background: var(--purple);
+  color: #fff;
+}
+.verify-banner-action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.verify-banner-close {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--body);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  border-radius: 6px;
+}
+.verify-banner-close:hover {
+  color: var(--heading);
+  background: color-mix(in srgb, var(--purple) 14%, transparent);
 }
 
 /* I35: toast stack. Fixed to the viewport bottom-center so it overlays any

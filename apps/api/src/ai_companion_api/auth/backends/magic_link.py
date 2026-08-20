@@ -34,13 +34,13 @@ MAGIC_LINK_TTL_SECONDS = 15 * 60  # 15 minutes
 
 
 class EmailTransport(Protocol):
-    async def send(self, *, to: str, link: str) -> None: ...
+    async def send(self, *, to: str, link: str, subject: str | None = None) -> None: ...
 
 
 class ConsoleEmailTransport:
     """Default for local/dev: print the magic link so the operator can click it."""
 
-    async def send(self, *, to: str, link: str) -> None:
+    async def send(self, *, to: str, link: str, subject: str | None = None) -> None:
         # Log ONLY the recipient — never the link. The link carries the sealed
         # ``?token=…`` login credential, which has no ``sk-``/``AIza``/``Bearer``
         # shape and so sails past ``redaction.RedactingFilter``. Structured logs
@@ -48,18 +48,19 @@ class ConsoleEmailTransport:
         # below is the explicit dev affordance that makes the console transport
         # usable at all (click the link to sign in); it is dev-only and never
         # installed in hosted SMTP deployments.
-        logger.info("magic-link issued for %s (sent via console transport)", to)
-        print(f"[magic-link] {to} -> {link}", flush=True)
+        label = subject or "magic-link"
+        logger.info("%s issued for %s (sent via console transport)", label, to)
+        print(f"[{label}] {to} -> {link}", flush=True)
 
 
 class SMTPEmailTransport:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    async def send(self, *, to: str, link: str) -> None:
+    async def send(self, *, to: str, link: str, subject: str | None = None) -> None:
         s = self.settings
         msg = EmailMessage()
-        msg["Subject"] = "Your Retellis sign-in link"
+        msg["Subject"] = subject or "Your Retellis sign-in link"
         msg["From"] = s.smtp_from or "noreply@retellis.local"
         msg["To"] = to
         msg.set_content(
@@ -69,10 +70,29 @@ class SMTPEmailTransport:
         import asyncio
 
         def _send() -> None:
-            ctx = ssl.create_default_context() if s.smtp_port == 465 else None
+            starttls = (s.smtp_starttls or "required").lower()
+            if s.smtp_port == 465:
+                # Implicit TLS (SMTPS) — open a TLS-wrapped connection directly.
+                with smtplib.SMTP_SSL(
+                    s.smtp_host, s.smtp_port, timeout=15, context=ssl.create_default_context()
+                ) as smtp:
+                    if s.smtp_username:
+                        smtp.login(s.smtp_username, s.smtp_password)
+                    smtp.send_message(msg)
+                return
             with smtplib.SMTP(s.smtp_host, s.smtp_port, timeout=15) as smtp:
-                if s.smtp_port != 465:
-                    smtp.starttls(context=ctx)
+                # STARTTLS policy: ``required`` (default) always upgrades;
+                # ``if_supported`` upgrades only when the server advertises it;
+                # ``never`` stays plain (internal postfix relay, no TLS cert).
+                if starttls == "never":
+                    pass
+                elif starttls == "if_supported":
+                    smtp.ehlo()
+                    if smtp.has_extn("starttls"):
+                        smtp.starttls(context=ssl.create_default_context())
+                        smtp.ehlo()
+                else:  # "required"
+                    smtp.starttls(context=ssl.create_default_context())
                 if s.smtp_username:
                     smtp.login(s.smtp_username, s.smtp_password)
                 smtp.send_message(msg)
@@ -81,7 +101,7 @@ class SMTPEmailTransport:
 
 
 class _OffTransport:
-    async def send(self, *, to: str, link: str) -> None:
+    async def send(self, *, to: str, link: str, subject: str | None = None) -> None:
         raise AuthError(503, "email transport is off; cannot send magic link")
 
 

@@ -45,6 +45,12 @@ class UserRecord:
     family_id: str | None = None
     family_role: str | None = None
     created_at: datetime | None = None
+    # Email ownership. Defaults to True so all legacy code paths (which don't
+    # pass the kwarg) keep the old "trusted" semantics — only the local-signup
+    # flow under FEATURE_EMAIL_VERIFICATION creates a row with False.
+    # ``email_verified_at`` is set when set_email_verified flips the flag.
+    email_verified: bool = True
+    email_verified_at: datetime | None = None
 
 
 @dataclass
@@ -79,6 +85,7 @@ class AuthStore(Protocol):
         password_hash: str | None,
         plan: str,
         credits_usd: float,
+        email_verified: bool = True,
     ) -> UserRecord: ...
     async def get_user(self, user_id: str) -> UserRecord | None: ...
     async def get_user_by_email(self, email: str) -> UserRecord | None: ...
@@ -106,6 +113,10 @@ class AuthStore(Protocol):
     async def set_user_family(
         self, *, user_id: str, family_id: str | None, family_role: str | None
     ) -> None: ...
+    # Email verification. Flips email_verified to True and stamps
+    # email_verified_at. Returns False if the user doesn't exist (the
+    # verify-email endpoint treats this as a no-op redirect, not an error).
+    async def set_email_verified(self, *, user_id: str) -> bool: ...
 
 
 def _utcnow() -> datetime:
@@ -131,6 +142,7 @@ class InMemoryAuthStore:
         password_hash: str | None,
         plan: str,
         credits_usd: float,
+        email_verified: bool = True,
     ) -> UserRecord:
         # Idempotent by (issuer, subject): a second login for the same identity
         # returns the existing row instead of creating a duplicate.
@@ -147,6 +159,7 @@ class InMemoryAuthStore:
             issuer=issuer,
             subject=subject,
             created_at=_utcnow(),
+            email_verified=email_verified,
         )
         self._users_by_id[user.id] = user
         if user.email:
@@ -247,6 +260,14 @@ class InMemoryAuthStore:
             u.family_id = family_id
             u.family_role = family_role
 
+    async def set_email_verified(self, *, user_id: str) -> bool:
+        u = self._users_by_id.get(user_id)
+        if u is None:
+            return False
+        u.email_verified = True
+        u.email_verified_at = _utcnow()
+        return True
+
     async def table_exists(self) -> bool:
         return True  # in-memory always "ready"
 
@@ -277,6 +298,7 @@ class PostgresAuthStore:
         password_hash: str | None,
         plan: str,
         credits_usd: float,
+        email_verified: bool = True,
     ) -> UserRecord:
         from ..db.models import Session as SessionModel  # noqa: F401  (ensure registry loaded)
         from ..db.models import User as UserModel
@@ -294,6 +316,7 @@ class PostgresAuthStore:
                 password_hash=password_hash,
                 issuer=issuer,
                 subject=subject,
+                email_verified=email_verified,
             )
             s.add(row)
             await s.commit()
@@ -496,6 +519,25 @@ class PostgresAuthStore:
             )
             await s.commit()
 
+    async def set_email_verified(self, *, user_id: str) -> bool:
+        from sqlalchemy import update
+
+        from ..db.models import User as UserModel
+
+        async with await self._session() as s:
+            # Atomic flip + timestamp. RETURNING the id so a verify click for a
+            # since-deleted user is a no-op (False) — we never mark a tombstoned
+            # account verified. Idempotent: re-verifying an already-verified row
+            # just re-stamps email_verified_at (harmless, stays within TTL).
+            r = await s.execute(
+                update(UserModel)
+                .where(UserModel.id == user_id)
+                .values(email_verified=True, email_verified_at=_utcnow())
+                .returning(UserModel.id)
+            )
+            await s.commit()
+            return r.scalar_one_or_none() is not None
+
     async def table_exists(self) -> bool:
         from sqlalchemy import select
 
@@ -523,6 +565,8 @@ def _row_to_user(row) -> UserRecord:  # type: ignore[no-untyped-def]
         family_id=row.family_id,
         family_role=row.family_role,
         created_at=row.created_at,
+        email_verified=getattr(row, "email_verified", True),
+        email_verified_at=getattr(row, "email_verified_at", None),
     )
 
 

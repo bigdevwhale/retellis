@@ -1,0 +1,36 @@
+# Retellis send-only outbound relay. Listens on port 25 inside the compose
+# network and delivers directly to the internet via DNS MX (no smarthost). The
+# service publishes NO host ports (see docker-compose.yml), so the only clients
+# that can reach it are other containers on the same compose network — the api
+# container is the only one that submits mail (SMTP_STARTTLS=never, no auth).
+# The no-publish guard is what keeps this from being an open relay, NOT
+# ``mynetworks`` below.
+
+# HELO / envelope origin. Must match the PTR (reverse DNS) set in the host
+# provider's panel (Selectel → retellis.com) so receiving servers trust the IP.
+myhostname = retellis.com
+myorigin = $myhostname
+inet_interfaces = all
+inet_protocols = all
+
+# retellis.com is NOT a local destination — this is send-only, no mailboxes.
+# Setting mydestination to localhost (not $myhostname) keeps outgoing mail to
+# retellis.com addresses on the internet transport instead of bouncing locally.
+mydestination = localhost
+
+# Trust the whole compose network. Safe only because port 25 is not published
+# to the host/internet (the open-relay guard is the no-publish, not this list).
+mynetworks = 0.0.0.0/0 [::]/0
+
+# Direct internet delivery (empty relayhost = resolve MX ourselves).
+relayhost =
+
+# OpenDKIM milter (signs outgoing). milter_default_action=accept means a DKIM
+# failure degrades to UNSIGNED mail, never a blocked send — the mail flow is
+# not held hostage to the milter being healthy.
+milter_default_action = accept
+non_smtpd_milters = inet:127.0.0.1:12345
+smtpd_milters = inet:127.0.0.1:12345
+
+# The api sets the From (SMTP_FROM); no rewriting here.
+header_size_limit = 409600

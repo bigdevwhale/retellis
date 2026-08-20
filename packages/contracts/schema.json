@@ -32,6 +32,11 @@
               "title": "Credits",
               "type": "boolean"
             },
+            "email_verification": {
+              "default": false,
+              "title": "Email Verification",
+              "type": "boolean"
+            },
             "hosted_fallback": {
               "default": false,
               "title": "Hosted Fallback",
@@ -954,6 +959,11 @@
         "credits": {
           "default": false,
           "title": "Credits",
+          "type": "boolean"
+        },
+        "email_verification": {
+          "default": false,
+          "title": "Email Verification",
           "type": "boolean"
         },
         "hosted_fallback": {
@@ -1930,6 +1940,11 @@
           "default": null,
           "title": "Email"
         },
+        "email_verified": {
+          "default": true,
+          "title": "Email Verified",
+          "type": "boolean"
+        },
         "family_id": {
           "anyOf": [
             {
@@ -2141,6 +2156,20 @@
         "tokens_out"
       ],
       "title": "ProviderSummary",
+      "type": "object"
+    },
+    "ResendVerificationRequest": {
+      "description": "Body for ``POST /v1/auth/verify-email/resend`` \u2014 re-sends the email\nverification link. The endpoint always acks ``{\"ok\": true}`` (non-enumerating:\nit never reveals whether the email has an account or is already verified).",
+      "properties": {
+        "email": {
+          "title": "Email",
+          "type": "string"
+        }
+      },
+      "required": [
+        "email"
+      ],
+      "title": "ResendVerificationRequest",
       "type": "object"
     },
     "RoutingNode": {

@@ -324,6 +324,14 @@ class User(Base):
     )
     family_role: Mapped[str | None] = mapped_column(String(16), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    # Email ownership. Defaults to True so legacy rows (pre-verification) are
+    # treated as already-trusted; the local-signup flow under
+    # FEATURE_EMAIL_VERIFICATION inserts False explicitly. ``email_verified_at``
+    # is stamped when the user clicks the verification link.
+    email_verified: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class Session(Base):

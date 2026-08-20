@@ -4,6 +4,7 @@ import { isFeatureRoute } from '@/lib/public-routes';
 import { useStore } from '@/lib/store';
 import { usePathname } from 'next/navigation';
 import { Suspense } from 'react';
+import { EmailVerifyBanner } from './EmailVerifyBanner';
 import { NewChatPicker } from './NewChatPicker';
 import { Rail } from './Rail';
 import { TopBar } from './TopBar';
@@ -38,6 +39,9 @@ export function AppShell({
     return (
       <div className="landing-shell">
         <TopBar />
+        <Suspense fallback={null}>
+          <EmailVerifyBanner />
+        </Suspense>
         <main>
           <div className="screen active">{children}</div>
         </main>
@@ -67,6 +71,9 @@ export function AppShell({
         <Rail />
       </Suspense>
       <main>
+        <Suspense fallback={null}>
+          <EmailVerifyBanner />
+        </Suspense>
         <div className="screen active">{children}</div>
       </main>
       <NewChatPicker />
