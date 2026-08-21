@@ -1,6 +1,54 @@
 # Active Context — Retellis
 
-*Current focus, recent decisions, next steps. Update this file after every significant work session. Last updated: 2026-08-20 (email verification for local-account signup).*
+*Current focus, recent decisions, next steps. Update this file after every significant work session. Last updated: 2026-08-21 (hosted UI de-technicalization: voice/TTS removed, BYOK keyind hidden, language-mirror persona directive).*
+
+## Hosted UI: voice/TTS removed + BYOK keyind hidden + language mirror (2026-08-21)
+
+Three hosted-feedback fixes shipped together:
+
+1. **Voice mode + audio playback removed everywhere.** The mic (speech-to-text), the per-bubble "Speak" button, the auto-speak toggle, and the listening bar are gone from `ChatScreen`; the "Speak the intro" TTS button is gone from `PracticesScreen`. `lib/speech.ts` deleted (no consumers). Dead i18n keys (`chat.voice`, `chat.autospeak`, `chat.speak`, `chat.listening`, `chat.keepgoing`, `chat.voicefail`, `pr.speak.cues`) + voice marketing copy in `fixtures.tsx` (FEATURES card, HOW step "Talk or write"→"Write freely", PLANS free/plus voice lines) removed. CSS for `.speak-btn`/`.mic`/`.listening-bar`/`.wave` dropped. Speech mocks removed from 5 chat test files. Self-hosted is unchanged except it also loses voice (the user asked "отовсюду" = everywhere, not hosted-only).
+2. **BYOK keyind + "no key" head hidden on hosted.** On hosted, the `.chat-keyind` bar ("BYOK / нет ключа / сменить") above the composer is hidden, and the chat-head persona model line drops its "· нет ключа" suffix (shows role alone) — a hosted user chats on the operator env fallback so "no key" is misleading. Self-hosted keeps both (real BYOK signal). Regression tests in `chat-no-key.test.ts` (hosted: keyind null + head has no "no key"; self-hosted: keyind present).
+3. **Companion mirrors the user's language.** `persona_block.build_persona_block` appends a universal `_LANG_DIRECTIVE` ("Always reply in the same language the user writes in… Do not transliterate") to every block (builtins, generic, custom-prompt override). Fixes gpt-4o-mini defaulting to English / transliterating "Привет" when the system prompt is English. Tests in `test_persona_block.py` (incl. `test_language_directive_appended_to_every_block`). `persona_prompt()` unchanged → family-therapist-prompt override test unaffected.
+
+**Not yet deployed** as of this write-up — needs `git push` + `docker compose … up -d --build api web` on the server, then verify a Russian turn replies in Russian and that the hosted chat shows no "нет ключа" / keyind.
+
+## Trial credits — WORKING via OpenRouter through FR VLESS proxy (2026-08-21)
+
+Hosted trial credits are **live**. New signups get `$0.05` (≈10–25 msgs on gpt-4o-mini); the routing chain serves real turns on the **operator-paid OpenRouter** key, gated by `credits_usd` (BYOK exempt). Verified end-to-end on retellis.com: signup → `credits_usd=0.05` → no-BYOK turn → `openrouter/openai/gpt-4o-mini` served **"Hello, how are you?"** → **0 fallback events** → credits decremented to `0.04989` (real cost, not mock).
+
+**Why a proxy was needed:** OpenRouter region-blocks the Selectel RU IP → `403 "Access denied by security policy"`. The block is **region (RU) based, not account based** — the same key returns 200 from a FR exit. User provided a VLESS+WS+TLS exit in France (176.31.63.163, OVH) — instruction file `C:\Users\user\chunkvpn\proxy-via-176-INSTRUCTION.md`.
+
+**Mechanism (only one works):** global env `HTTPS_PROXY=http://xray:10809` on the api. litellm's per-call `proxy=` kwarg is **NOT** wired to httpx (FAIL 403); socks5 needs `socksio` which the api image lacks. `HTTPS_PROXY` is process-global → ALL external https (OpenRouter + BYOK + Telegram) egresses through FR. `NO_PROXY` keeps Langfuse/postgres/loopback direct. Acceptable for a small fresh dep; SPOF if tunnel dies (xray has `restart: unless-stopped`).
+
+**Shipped (commit 0215b16, pushed + deployed):**
+- `llm/provider.py`: `DEFAULT_MODELS`/`UTILITY_MODELS["openrouter"]` → `openrouter/openai/gpt-4o-mini` (the dot-form `anthropic/claude-3.5-haiku` was removed by OpenRouter and 404s).
+- `deploy/docker-compose.yml`: api env gets `HTTPS_PROXY=${LLM_EGRESS_PROXY:-}` + `NO_PROXY` (empty → direct, self-hosted default unchanged).
+- `deploy/docker-compose.proxy.yml` (opt-in): `teddysun/xray` service, socks+http inbounds bound `0.0.0.0` INSIDE the container only (no `ports:` → not an open relay), reaches api at `http://xray:10809`. Run with `docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.proxy.yml --project-directory . up -d`.
+- `deploy/xray/config.json.tpl`: VLESS outbound with `__XRAY_UUID__`/`__XRAY_HOST__` sed-substituted at start (secret stays in `.env`).
+- `deploy/.env.example`: documents `LLM_EGRESS_PROXY`, `XRAY_UUID`, `XRAY_HOST`, `NO_PROXY`.
+
+**Server `.env` now:** `LITELLM_API_KEY_OPENROUTER=<key>`, `HOSTED_SIGNUP_CREDITS_USD=0.05`, `FEATURE_CREDITS=1`, `LLM_EGRESS_PROXY=http://xray:10809`, `XRAY_UUID=add54431-…`, `XRAY_HOST=vpn.badykov.com`, `NO_PROXY=…`. Secrets (OR key + VLESS UUID) live ONLY in server `/root/ai-companion/.env` (root:root 0600), NOT in the repo.
+
+**Chat lockout fix (commit 4ea78b9, deployed):** a fresh hosted signup with no BYOK key was hard-locked out of chat ("Личного ключа LLM ещё нет… чтобы включить чат") even though the trial is supposed to serve on the operator OpenRouter fallback. Root cause: `ChatScreen` derived `hosted = !!config?.features.billing`, but the server runs `FEATURE_BILLING=0` + `FEATURE_CREDITS=1` (trial needs no billing) → `hosted=false` → self-hosted hard-lockout branch. Fixed to `hosted = config?.mode === 'hosted'` (the soft-nudge path). `/v1/config` confirms `mode=hosted, billing=false, credits=true`. TopBar/Rail keep using `features.billing` for the /plans nav (that genuinely needs billing). Regression test in `chat-no-key.test.ts`. NOTE: users with the old bundle cached must hard-refresh.
+
+**Follow-ups (not blocking):**
+- Web catalog `providerCatalog.ts` still lists the dead `openrouter/anthropic/claude-3.5-haiku` as the openrouter `defaultModel`/`fastModel` → BYOK users who pick the default get 404 and fall through to operator credits (leak). Low priority (BYOK users usually pick explicitly). Tests in `providerCatalog.test.ts`/`keys-combobox.test.ts` assert the dead id.
+- Credits gate is **USD-cost-metered, not a message counter**. $0.05 ≈ 10–25 msgs on gpt-4o-mini. A hard-10-message cap would need a per-user turn counter (doesn't exist) — small code follow-up if an exact cap is wanted.
+- **Email delivery** still failing (secondary, unchanged from below): Selectel rejecting sends, likely retellis.com not verified in Selectel panel (DKIM/SPF/ownership DNS pending). The verify *backend* works; only delivery fails.
+
+## Email verification deployed LIVE on retellis.com (2026-08-21)
+
+The email-verification feature (built 2026-08-20 — see below) is now **live in production** on the hosted stack. Verified end-to-end: signup → Selectel accepts (250) → `GET /v1/auth/verify-email?token=…` → 303 home → `email_verified=true` in the DB. `/v1/config` returns `mode=hosted`, `email_verification=true`. api logs show no "send failed".
+
+**Delivery path = Selectel Email Service** (NOT self-hosted postfix). The api's `SMTPEmailTransport` talks to `smtp.mail.selcloud.ru:1126` STARTTLS directly. Postfix was attempted first and abandoned for two hard reasons: (1) outbound port 25 is blocked on the Selectel VDS at the network level (host iptables clean; Selectel docs confirm VDS cannot unblock 25/465/587), and (2) opendkim 2.11.0 in `debian:stable-slim` crashes with `unknown canonicalization algorithm ""` (unsolved). Selectel signs DKIM and owns the sending-IP reputation → far better deliverability than VPS self-send. Free tier ~1000 emails/month, then pay-as-you-go per 1000.
+
+**Repo changes (commit ca8a8ef):** removed the `postfix:` service + `postfix_data`/`opendkim_keys` volumes from `deploy/docker-compose.yml` (replaced with a NOTE explaining the removal); `deploy/.env.example` SMTP section rewritten to document the Selectel path (host/port 1126/STARTTLS/numeric login/API-key password) + a DNS section (SPF `include:spf.mail.selcloud.ru`, DKIM `selcloud._domainkey.<domain>`, DMARC `p=none`, domain-ownership TXT). The old build files (`deploy/Dockerfile.postfix`, `deploy/postfix/*`) are kept as **archived reference only**, NOT in the live stack. `grep -r 'sk-' deploy/` still empty.
+
+**Server `.env` (root-owned, NOT committed):** `SMTP_HOST=smtp.mail.selcloud.ru`, `SMTP_PORT=1126`, `SMTP_STARTTLS=required`, `SMTP_USERNAME=<numeric>`, `SMTP_PASSWORD=<API-key>`, `SMTP_FROM=noreply@retellis.com`, `AUTH_EMAIL_TRANSPORT=smtp`, `FEATURE_EMAIL_VERIFICATION=1`, `AUTH_EMAIL_VERIFICATION_SECRET=<hex>`.
+
+**PENDING — operator must add DNS records in the retellis.com zone** (the backend verify flow works regardless; these only affect inbox-vs-spam at Gmail/Outlook): SPF `v=spf1 include:spf.mail.selcloud.ru -all`; DKIM `selcloud._domainkey.retellis.com TXT <value from Selectel panel after domain verification>`; DMARC `_dmarc.retellis.com TXT "v=DMARC1; p=none; rua=mailto:postmaster@retellis.com"`; plus the Selectel domain-ownership TXT. Honest caveat: new sender domains can see a brief warmup period at Gmail/Outlook; start `p=none` (monitor), tighten to `p=quarantine` after a week of clean rua reports. PTR on the VDS IP (135.106.193.10 → retellis.com) is no longer load-bearing for email (Selectel's PTR covers the sending IP) but is good hygiene.
+
+**Credits-gate note (needs a user decision):** `HOSTED_SIGNUP_CREDITS_USD=0` means new hosted free-tier users get **no server-paid credits** — the routing chain gates real env providers immediately and falls to **BYOK-only or mock**. That is likely the intended free-tier design (BYOK-first, as the UX de-technicalization workstream set up), but worth confirming with the user before any paid launch. To grant trial credits, set `HOSTED_SIGNUP_CREDITS_USD>0` + `FEATURE_CREDITS=1`.
 
 ## Email verification for local-account signup (2026-08-20)
 

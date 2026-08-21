@@ -1,8 +1,17 @@
 # Progress — Retellis
 
-*What works, what's left, evolution of decisions. Update alongside activeContext.md. Last updated: 2026-08-20 (email verification for local-account signup).*
+*What works, what's left, evolution of decisions. Update alongside activeContext.md. Last updated: 2026-08-21 (trial credits live via OpenRouter through FR VLESS egress proxy).*
 
 ## What works (shipped & test-guarded)
+
+### Email verification — DEPLOYED LIVE on retellis.com (2026-08-21)
+- The 2026-08-20 feature is live in production. Verified end-to-end: signup → Selectel 250 → `GET /v1/auth/verify-email?token=…` → 303 home → `email_verified=true`. `/v1/config` returns `mode=hosted`, `email_verification=true`. No "send failed" in api logs.
+- **Delivery path = Selectel Email Service** (`smtp.mail.selcloud.ru:1126` STARTTLS), NOT self-hosted postfix. The api's `SMTPEmailTransport` talks to Selectel directly. Postfix abandoned: outbound port 25 is blocked at the Selectel VDS network level (host iptables clean; docs confirm VDS cannot unblock 25/465/587), and opendkim 2.11.0 in `debian:stable-slim` crashes on `Canonicalization` (unsolved). Selectel signs DKIM + owns sending-IP reputation. Free ~1000 emails/month, then pay-as-you-go per 1000.
+- Repo (commit ca8a8ef): `postfix:` service + volumes removed from `deploy/docker-compose.yml` (NOTE left in place); `deploy/.env.example` rewritten (Selectel SMTP path + DNS section: SPF `include:spf.mail.selcloud.ru`, DKIM `selcloud._domainkey`, DMARC `p=none`, domain-ownership TXT); `deploy/Dockerfile.postfix` + `deploy/postfix/*` kept as archived reference only. `grep -r 'sk-' deploy/` still empty.
+- **PENDING (operator):** add the Selectel-provided SPF/DKIM/DMARC + domain-ownership TXT records in the retellis.com zone (backend verify flow works regardless; DNS only affects inbox-vs-spam). New-sender warmup caveat at Gmail/Outlook; start `p=none`, tighten after clean rua reports. PTR on VDS IP no longer load-bearing for email but good hygiene.
+- **Trial credits — SHIPPED (commit 0215b16, 2026-08-21):** hosted free tier now grants `$0.05` at signup, served on the operator-paid OpenRouter key through a FR VLESS egress proxy (OpenRouter region-blocks the RU Selectel IP → 403). `DEFAULT_MODELS["openrouter"]` fixed to `openrouter/openai/gpt-4o-mini` (the dot-form haiku was removed by OpenRouter). `deploy/docker-compose.proxy.yml` (opt-in `xray` service) + `deploy/xray/config.json.tpl` + api `HTTPS_PROXY`/`NO_PROXY` env. Verified live: signup→$0.05→real gpt-4o-mini turn→credits decremented. BYOK exempt (own key never consumes operator credits). See activeContext "Trial credits — WORKING".
+  - **Follow-up:** web `providerCatalog.ts` still has the dead `openrouter/anthropic/claude-3.5-haiku` as the openrouter default (BYOK users picking it 404 → leak to operator credits). Low priority.
+  - **Follow-up:** credits gate is USD-cost-metered, not a fixed message counter; $0.05 ≈ 10–25 msgs. An exact-10-msg cap would need a per-user turn counter (none yet).
 
 ### Email verification for local-account signup (2026-08-20)
 - Soft, opt-in (`FEATURE_EMAIL_VERIFICATION` default off) email-ownership proof on the local-signup flow. Reuses magic-link HMAC `seal`/`open_sealed` + `default_transport`. Signup creates `email_verified=false` + issues session (soft — no backend gating) + emails a sealed-token link; `GET /v1/auth/verify-email?token=` flips the flag → 303 home / `/?verify=failed`; `POST /v1/auth/verify-email/resend` is non-enumerating (always `{ok:true}`). Flag off → identical to today (`email_verified=true`, endpoints 404, no email). Bootstrap rejects the flag unless `AUTH_BACKEND=local` + `AUTH_EMAIL_TRANSPORT=smtp` + a secret (falls back to `AUTH_MAGIC_LINK_SECRET`).
