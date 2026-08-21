@@ -119,6 +119,19 @@ def test_build_persona_block_is_deterministic() -> None:
     assert "Sam, a warm easy friend" in build_persona_block("sam")
 
 
+def test_language_directive_appended_to_every_block() -> None:
+    # The companion must reply in the user's language (e.g. Russian when the
+    # user writes Russian) — without this, an English system prompt makes the
+    # model default to English. The directive is universal, so it lands on
+    # builtins, the generic fallback, AND custom-prompt overrides.
+    for persona in ("aria", "sam", "nico", "mira", "lou", "fam", "does-not-exist"):
+        block = build_persona_block(persona)
+        assert "same language the user writes in" in block, persona
+        assert "Russian" in block, persona
+    custom = build_persona_block("custom-1", prompt="You are Sage.")
+    assert "same language the user writes in" in custom
+
+
 # --- custom-persona override (prompt + tone come from the request) -----------
 
 
@@ -134,10 +147,13 @@ def test_prompt_override_appends_tone_directives() -> None:
     assert "open questions and reflection" in block  # direct 30 → low
 
 
-def test_prompt_override_without_tone_is_just_the_prompt() -> None:
+def test_prompt_override_without_tone_is_prompt_plus_lang_directive() -> None:
     block = build_persona_block("custom-1", prompt="You are Sage.")
-    assert block == "You are Sage."
+    # No tone → no "Voice —" directive, but the universal language directive
+    # is still appended (it is companion behavior, not persona character).
+    assert block.startswith("You are Sage.")
     assert "Voice —" not in block
+    assert "same language the user writes in" in block
 
 
 def test_prompt_override_takes_precedence_over_builtin_id() -> None:

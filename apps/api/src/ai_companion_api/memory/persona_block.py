@@ -101,6 +101,17 @@ _GENERIC_PROMPT = (
     "Disclose, don’t perform."
 )
 
+# Universal language directive, appended to every persona block (it is a
+# companion behavior, not part of any persona's character). Without it, a
+# model given an English system prompt defaults to English even when the user
+# writes in another language — e.g. gpt-4o-mini transliterates "Привет" to
+# Latin and replies in English. Instruct it to mirror the user's language.
+_LANG_DIRECTIVE = (
+    "Always reply in the same language the user writes in. "
+    "If the user writes in Russian, reply in Russian; if in English, reply in "
+    "English. Do not transliterate — use the user's script."
+)
+
 
 def persona_prompt(persona_id: str) -> str:
     entry = _BUILTIN.get(persona_id)
@@ -169,16 +180,19 @@ def build_persona_block(
     Always deterministic and injected (never reconstructed from memory)."""
     if prompt:
         directives = tone_directives(tone)
-        return f"{prompt}\n{directives}" if directives else prompt
-    entry = _BUILTIN.get(persona_id)
-    if not entry:
-        return _GENERIC_PROMPT
-    reg_prompt = entry["prompt"]
-    reg_tone = entry.get("tone")  # type: ignore[var-annotated]
-    directives = tone_directives(reg_tone)  # type: ignore[arg-type]
-    if not directives:
-        return reg_prompt  # type: ignore[return-value]
-    return f"{reg_prompt}\n{directives}"
+        base = f"{prompt}\n{directives}" if directives else prompt
+    else:
+        entry = _BUILTIN.get(persona_id)
+        if not entry:
+            base = _GENERIC_PROMPT
+        else:
+            reg_prompt = entry["prompt"]
+            reg_tone = entry.get("tone")  # type: ignore[var-annotated]
+            directives = tone_directives(reg_tone)  # type: ignore[arg-type]
+            base = f"{reg_prompt}\n{directives}" if directives else reg_prompt  # type: ignore[assignment]
+    # The language directive is universal (not persona character), so it is
+    # appended to every block regardless of which branch produced `base`.
+    return f"{base}\n{_LANG_DIRECTIVE}"
 
 
 __all__ = ["build_persona_block", "persona_prompt", "tone_directives"]
