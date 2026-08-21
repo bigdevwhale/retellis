@@ -78,7 +78,11 @@ export function ChatScreen() {
   // *personal* key is not a hard lockout — the routing chain falls through to
   // env keys and MockAdapter, so the app always answers. We show a soft nudge
   // and keep the composer enabled instead of disabling chat.
-  const hosted = !!config?.features.billing;
+  // Keyed on the deployment MODE, not `features.billing`: the hosted trial
+  // path (operator-paid OpenRouter env fallback + trial credits) serves real
+  // turns without billing being configured (FEATURE_BILLING=0). Tying this to
+  // `billing` would hard-lock a fresh hosted signup out of chat.
+  const hosted = config?.mode === 'hosted';
 
   const convo = convos.find((c) => c.id === activeConvoId) ?? convos[0];
   const persona = personaById(convo?.personaId ?? activePersonaId, personas());

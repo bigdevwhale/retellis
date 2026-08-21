@@ -74,8 +74,9 @@ const validMe = {
 
 let getMeShouldThrow = false;
 let listProvidersMock = vi.fn(async () => [] as never[]);
-// Swappable auth config so we can exercise both self-hosted (billing off,
-// hard lockout) and hosted (billing on, lazy onboarding soft nudge).
+// Swappable auth config so we can exercise both self-hosted (hard lockout)
+// and hosted (lazy onboarding soft nudge). The lockout derivation keys on
+// `mode`, not `features.billing` — see the hosted describe block below.
 let getAuthConfigMock: () => Promise<AuthConfig> = vi.fn<() => Promise<AuthConfig>>(async () => ({
   mode: 'self_hosted',
   profile: 'local',
@@ -455,9 +456,11 @@ describe('ChatScreen — no-key lockout', () => {
 
 describe('ChatScreen — hosted lazy onboarding (soft nudge, not lockout)', () => {
   beforeEach(() => {
-    // Hosted = billing on. A missing *personal* key is not a hard lockout —
-    // the routing chain falls through to env keys / MockAdapter, so the app
-    // always answers. The composer stays enabled and a soft nudge shows.
+    // Hosted mode: a missing *personal* key is not a hard lockout — the
+    // routing chain falls through to the operator env fallback (trial credits
+    // / OpenRouter) or MockAdapter, so the app always answers. The composer
+    // stays enabled and a soft nudge shows. Keyed on `mode === 'hosted'`, NOT
+    // `features.billing` — the trial path works with billing off.
     getAuthConfigMock = vi.fn<() => Promise<AuthConfig>>(async () => ({
       mode: 'hosted',
       profile: 'local',
@@ -513,5 +516,45 @@ describe('ChatScreen — hosted lazy onboarding (soft nudge, not lockout)', () =
 
     const banner = container!.querySelector('.chat-locked-banner') as HTMLElement | null;
     expect(banner).not.toBeNull();
+  });
+
+  it('enables the composer on hosted mode even when billing is OFF (trial-credits path: operator env fallback)', async () => {
+    // Regression: the live hosted server runs FEATURE_BILLING=0 +
+    // FEATURE_CREDITS=1 — trial credits are served by the operator-paid
+    // OpenRouter env fallback, no billing provider configured. `hosted` must
+    // be keyed on `mode === 'hosted'`, not `features.billing`, or a fresh
+    // hosted signup is hard-locked out of chat.
+    getAuthConfigMock = vi.fn<() => Promise<AuthConfig>>(async () => ({
+      mode: 'hosted',
+      profile: 'local',
+      auth_backends: ['local'],
+      features: {
+        billing: false,
+        credits: true,
+        hosted_fallback: false,
+        magic_links: false,
+        email_verification: false,
+        journal: true,
+        shares: true,
+      },
+    }));
+    await mountAndSettle(() => {
+      useStore.setState({
+        activePersonaId: 'aria',
+        family: null,
+        familyProvider: null,
+        activeProvider: null,
+      });
+    });
+
+    const textarea = container!.querySelector('textarea') as HTMLTextAreaElement | null;
+    expect(textarea).not.toBeNull();
+    expect(textarea!.disabled).toBe(false);
+
+    const banner = container!.querySelector('.chat-locked-banner') as HTMLElement | null;
+    expect(banner).not.toBeNull();
+    const link = banner!.querySelector('a') as HTMLAnchorElement | null;
+    expect(link).not.toBeNull();
+    expect(link!.getAttribute('href')).toBe('/onboarding');
   });
 });
