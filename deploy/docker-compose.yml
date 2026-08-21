@@ -160,6 +160,16 @@ services:
       PADDLE_ENVIRONMENT: ${PADDLE_ENVIRONMENT:-sandbox}
       YUKASSA_SHOP_ID: ${YUKASSA_SHOP_ID:-}
       YUKASSA_SECRET_KEY: ${YUKASSA_SECRET_KEY:-}
+      # Egress proxy for outbound https from the api. OpenRouter is region-
+      # blocked from some host IPs (RU → 403 "Access denied by security policy");
+      # set LLM_EGRESS_PROXY to an http proxy reachable from the container to
+      # route external https (LLM providers + Telegram) through it. Empty →
+      # direct (the self-hosted default). NO_PROXY keeps internal services and
+      # loopback direct so Langfuse (http://langfuse:3001) is never proxied.
+      # The companion docker-compose.proxy.yml adds an `xray` service that
+      # terminates a VLESS tunnel and exposes an http inbound at xray:10809.
+      HTTPS_PROXY: ${LLM_EGRESS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,langfuse,postgres,api,web,caddy}
     # Exposed for direct dev/debug only. The supported entry is Caddy on :80
     # (same-origin cookies). Don't point a browser at :8000 in production —
     # that bypasses the SameSite=Lax first-party cookie model.

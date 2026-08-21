@@ -37,7 +37,11 @@ DEFAULT_MODELS: dict[str, str] = {
     "openai": "gpt-4o-mini",
     "anthropic": "claude-3-5-haiku-latest",
     "google": "gemini/gemini-1.5-flash",
-    "openrouter": "openrouter/anthropic/claude-3.5-haiku",
+    # OpenRouter: ``anthropic/claude-3.5-haiku`` (dot form) was removed by
+    # OpenRouter and 404s ("No endpoints found"); ``openai/gpt-4o-mini`` is a
+    # stable, cheap default that also works behind the egress proxy. BYOK users
+    # pick their own model; this is the env-fallback / empty-pick default.
+    "openrouter": "openrouter/openai/gpt-4o-mini",
     "ollama": "ollama/llama3.3",
     # Azure: the user supplies the deployment name in the per-request model
     # field; ``azure/<deployment>`` is what litellm expects. We keep a sensible
@@ -62,7 +66,8 @@ UTILITY_MODELS: dict[str, str] = {
     "openai": "gpt-4o-mini",
     "anthropic": "claude-3-5-haiku-latest",
     "google": "gemini/gemini-1.5-flash",
-    "openrouter": "openrouter/anthropic/claude-3.5-haiku",
+    # See DEFAULT_MODELS — the dot-form haiku was removed by OpenRouter.
+    "openrouter": "openrouter/openai/gpt-4o-mini",
     "azure": "azure/gpt-4o-mini",
     "aihubmix": "gpt-4o-mini",
 }

@@ -1,0 +1,46 @@
+# Opt-in egress proxy: an xray-core service that tunnels outbound https from
+# the api through a VLESS+WS+TLS exit. Use this when an LLM provider is
+# region-blocked from the host IP (e.g. OpenRouter 403s from RU).
+#
+# Activate with BOTH compose files (the override has no value on its own):
+#
+#   docker compose -f deploy/docker-compose.yml -f deploy/docker-compose.proxy.yml \
+#     --project-directory . up -d
+#
+# The xray service joins the default network, so the api reaches it at
+# `http://xray:10809`. Set on the api (in .env):
+#
+#   LLM_EGRESS_PROXY=http://xray:10809   # routes external https through xray
+#   XRAY_UUID=<your vless user id>        # required — the tunnel credential
+#   XRAY_HOST=<your vless host>           # required — e.g. vpn.example.com
+#
+# The inbounds bind 0.0.0.0 INSIDE the container only; no `ports:` are published,
+# so neither the socks nor the http inbound is reachable from the host or the
+# public internet — only from sibling services on the compose network. Do NOT
+# add a `ports:` mapping: that would turn this into an open proxy.
+#
+# Tradeoff: HTTPS_PROXY is process-global for the api, so ALL external https
+# (every LLM provider incl. BYOK, and Telegram) egresses through the tunnel, not
+# just OpenRouter. This is the only working mechanism — litellm's per-call
+# `proxy=` kwarg is not wired through to httpx, and socks5 needs `socksio` which
+# the api image does not ship. If the tunnel dies, all external LLM + Telegram
+# calls fail until xray restarts (`restart: unless-stopped` covers this).
+services:
+  xray:
+    image: teddysun/xray:latest
+    restart: unless-stopped
+    volumes:
+      - ./deploy/xray/config.json.tpl:/etc/xray/config.json.tpl:ro
+    environment:
+      # Consumed by the command's sed step; the teddysun image reads config from
+      # /etc/xray/config.json (its default Cmd). We template the secret (UUID)
+      # and the endpoint host into the config at start, then exec xray.
+      XRAY_UUID: ${XRAY_UUID:-}
+      XRAY_HOST: ${XRAY_HOST:-}
+    command:
+      - sh
+      - -c
+      - |
+        test -n "$$XRAY_UUID" && test -n "$$XRAY_HOST" || { echo 'XRAY_UUID and XRAY_HOST are required (deploy/docker-compose.proxy.yml)'; exit 2; }
+        sed -e 's|__XRAY_UUID__|'"$$XRAY_UUID"'|' -e 's|__XRAY_HOST__|'"$$XRAY_HOST"'|' /etc/xray/config.json.tpl > /etc/xray/config.json
+        exec /usr/bin/xray -config /etc/xray/config.json
