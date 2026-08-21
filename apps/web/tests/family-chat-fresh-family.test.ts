@@ -227,6 +227,10 @@ function setupFamily(opts: {
     },
     activeFamilyMemberId: 'u-me',
     familySessionMode: 'private',
+    // Hydration is done by the time the user can send — ChatScreen's
+    // newChat-on-empty effect is gated on `hydrated`, so the test must mirror
+    // the post-hydration state or no convo is minted for the send.
+    hydrated: true,
   });
 }
 

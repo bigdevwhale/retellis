@@ -62,6 +62,7 @@ class LocalAccountsBackend:
         password: str,
         display_name: str | None,
         user_agent: str | None = None,
+        lang: str | None = None,
     ) -> tuple[UserRecord, str]:
         email = email.strip().lower()
         if not email or not password:
@@ -97,7 +98,7 @@ class LocalAccountsBackend:
             from ..email_verification import send_verification_email
 
             try:
-                await send_verification_email(self.settings, self.store, email)
+                await send_verification_email(self.settings, self.store, email, lang=lang)
             except Exception:  # noqa: BLE001 — never fail signup on email send
                 import logging
 

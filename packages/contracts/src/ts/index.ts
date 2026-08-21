@@ -499,6 +499,9 @@ export const LocalSignupRequest = z.object({
   // Argon2id server-side; never logged, never returned.
   password: z.string(),
   display_name: z.string().nullable().nullish(),
+  // Interface language ("en" | "ru") at signup — the verification email is
+  // sent in this language. Omitted/unknown → English.
+  lang: z.string().nullable().nullish(),
 });
 export type LocalSignupRequest = z.infer<typeof LocalSignupRequest>;
 
@@ -514,7 +517,12 @@ export type MagicLinkRequest = z.infer<typeof MagicLinkRequest>;
 // Body for POST /v1/auth/verify-email/resend. The endpoint always acks
 // {"ok": true} (non-enumerating: never reveals whether the email has an
 // account or is already verified).
-export const ResendVerificationRequest = z.object({ email: z.string() });
+export const ResendVerificationRequest = z.object({
+  email: z.string(),
+  // Interface language ("en" | "ru") for the re-sent email. Omitted/unknown →
+  // English.
+  lang: z.string().nullable().nullish(),
+});
 export type ResendVerificationRequest = z.infer<typeof ResendVerificationRequest>;
 
 // --- Billing (subscription purchase) ---

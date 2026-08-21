@@ -601,6 +601,9 @@ class LocalSignupRequest(BaseModel):
     # Argon2id server-side; never logged, never returned.
     password: str
     display_name: str | None = None
+    # Interface language ("en" | "ru") at signup time, so the verification
+    # email is sent in the language the user chose. None/unknown → English.
+    lang: str | None = None
 
 
 class LocalLoginRequest(BaseModel):
@@ -618,6 +621,10 @@ class ResendVerificationRequest(BaseModel):
     it never reveals whether the email has an account or is already verified)."""
 
     email: str
+    # Interface language ("en" | "ru") for the re-sent email. None/unknown →
+    # English. Lets a user who switched the UI language after signup get the
+    # reminder in the now-current language.
+    lang: str | None = None
 
 
 # --- Billing (subscription purchase) ---

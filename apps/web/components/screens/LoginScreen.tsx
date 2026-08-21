@@ -98,7 +98,7 @@ export function LoginScreen() {
     setBusy(true);
     try {
       if (mode === 'signup') {
-        await localSignup({ email, password, display_name: name || undefined });
+        await localSignup({ email, password, display_name: name || undefined, lang });
         // Soft verification: when the feature is on, the account is created
         // unverified and a link was emailed. The session is already set, so
         // we *could* finish() — but first surface a "check your email" panel
@@ -148,7 +148,7 @@ export function LoginScreen() {
     setResendBusy(true);
     setResendDone(false);
     try {
-      await resendVerificationEmail(verifyEmail);
+      await resendVerificationEmail(verifyEmail, lang);
       setResendDone(true);
     } catch {
       // Non-enumerating endpoint; a failure here is config drift / network —

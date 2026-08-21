@@ -20,7 +20,7 @@ import { useAuthCtx } from '@/lib/auth';
 
 export function EmailVerifyBanner() {
   const { principal, config } = useAuthCtx();
-  const { L2 } = useLang();
+  const { L2, lang } = useLang();
   const search = useSearchParams();
   const verifyFailed = search.get('verify') === 'failed';
 
@@ -54,7 +54,7 @@ export function EmailVerifyBanner() {
     setResendBusy(true);
     setResendDone(false);
     try {
-      await resendVerificationEmail(principal?.email ?? '');
+      await resendVerificationEmail(principal?.email ?? '', lang);
       setResendDone(true);
     } catch {
       toast.error(L2({ en: 'Could not resend the link.', ru: 'Не удалось отправить ссылку.' }));

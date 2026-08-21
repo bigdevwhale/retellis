@@ -121,6 +121,10 @@ beforeEach(() => {
     activePersonaId: 'therapist',
     convos: [],
     activeConvoId: '',
+    // Post-hydration state — ChatScreen's newChat-on-empty effect is gated on
+    // `hydrated`, so mirror the realistic state where a convo has been minted
+    // and the render timing matches production.
+    hydrated: true,
   });
 });
 

@@ -1,6 +1,18 @@
 # Active Context — Retellis
 
-*Current focus, recent decisions, next steps. Update this file after every significant work session. Last updated: 2026-08-21 (hosted UI de-technicalization: voice/TTS removed, BYOK keyind hidden, language-mirror persona directive).*
+*Current focus, recent decisions, next steps. Update this file after every significant work session. Last updated: 2026-08-21 (hosted UI: browser-lang default, localized verification email, convo-flash fix, family copy, authed home redirect).*
+
+## Hosted UI: 5 follow-up fixes (2026-08-21)
+
+Five hosted-feedback fixes shipped together (pending commit + deploy):
+
+1. **Browser-language default.** `app/layout.tsx` inline boot script: when no `companion.lang` is saved, sniff `navigator.languages[0]`/`navigator.language` — ru* → `ru`, else `en` — and set `document.documentElement.lang` before hydration. `LangProvider` already reads `.lang` as initial state, so the UI opens in the browser language on first visit; the first effect tick persists it to `companion.lang` (a saved pref always wins thereafter). No client flash (boot runs before React hydrates).
+2. **Localized verification email.** The verification email is now sent in the UI language the user signed up / re-sent in. Contract: `lang: str | None = None` added to `LocalSignupRequest` + `ResendVerificationRequest` (py+zod+REGISTRY, `pnpm contracts:check` OK 46 models). Wired: `router.signup`→`backend.signup(lang=…)`→`send_verification_email(lang=…)`; `router.resend_verification` passes `body.lang`. `email_verification.py` localizes subject (`_VERIFY_SUBJECTS`) + body (`_verify_body`, TTL derived from `auth_email_verification_ttl_seconds`); `EmailTransport.send` gained an optional `body` param (backward-compat — magic-link default body unchanged). Web: `localSignup`/`resendVerificationEmail` carry `lang`; `LoginScreen` + `EmailVerifyBanner` pass `lang` from `useLang()`. Unknown/None → English. Tests: `test_signup_with_ru_lang_sends_russian_email` + `test_resend_uses_passed_lang`.
+3. **Convo fixture flash fixed.** The 4 fixture convos (`CONVOS`) no longer seed at store init (`convos: []`, `activeConvoId: ''`) — they flashed in the sidebar for the brief window before `hydrateConvos()` replaced them with the server list ("4 чужих диалога"). `ChatScreen`'s newChat-on-empty effect is now gated on `hydrated` so no stray fresh convo flashes either. Offline fallback preserved: the `hydrateConvos` catch block seeds fixtures only when the API fails AND there's no local state yet. Tests updated to set `hydrated: true` (post-hydration state is realistic once the user interacts): `chat-no-key.test.ts` beforeEach + `family-chat-fresh-family.test.ts` setupFamily.
+4. **Family screen copy replaced.** `FamilySettingsScreen.tsx` (the no-family/primary screen's help line): the "encryption + not a licensed therapist" disclosure → feature-explaining copy (private 1:1 chats + one shared joint thread + shared key for joint / personal key for private + SECURITY.md pointer). en+ru.
+5. **Authed home redirect.** `app/page.tsx` is now a server component that reads the session cookie (same cookie the layout reads for chrome selection) and `redirect('/chat')`s an authed user **before any HTML is sent** — no client flash of the guest landing. Stale cookies redirect optimistically; AuthGate then bounces a truly-revoked session to /login. Guests still see the marketing landing.
+
+**Verified:** `pnpm contracts:check` (46 models parity), `pnpm typecheck` clean, full web vitest 184/184, api email-verification + auth tests pass. Pre-existing (NOT mine): 5 routing/bedrock pytest flakes (pass in isolation, fail in full run — env-leakage, same on `main`) + 3 biome lint errors (ChatScreen auto-scroll/pinnedRef `useExhaustiveDependencies`, FamilySettingsScreen SVG a11y — all in code I didn't touch).
 
 ## Hosted UI: voice/TTS removed + BYOK keyind hidden + language mirror (2026-08-21)
 

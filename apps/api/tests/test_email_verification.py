@@ -44,8 +44,10 @@ class _CapturingTransport:
     def __init__(self) -> None:
         self.sent: list[dict] = []
 
-    async def send(self, *, to: str, link: str, subject: str | None = None) -> None:
-        self.sent.append({"to": to, "link": link, "subject": subject})
+    async def send(
+        self, *, to: str, link: str, subject: str | None = None, body: str | None = None
+    ) -> None:
+        self.sent.append({"to": to, "link": link, "subject": subject, "body": body})
 
 
 @pytest.fixture
@@ -171,6 +173,67 @@ async def test_expired_token_redirects_to_failed(monkeypatch, make_verify_app, a
         r = await ac.get(f"/v1/auth/verify-email?token={token}", follow_redirects=False)
         assert r.status_code == 303
         assert r.headers["location"].endswith("/?verify=failed")
+
+
+# --- localized subject + body (interface language) -------------------------
+
+
+async def test_signup_with_ru_lang_sends_russian_email(make_verify_app, app_client) -> None:
+    """The verification email is sent in the UI language passed at signup, so a
+    user who registered with the Russian interface gets a Russian subject +
+    body (and vice-versa for English / omitted lang)."""
+    cap = _install_capture()
+    try:
+        app = make_verify_app()
+        async with app_client(app) as ac:
+            r = await ac.post(
+                "/v1/auth/signup",
+                json={"email": "alice@example.com", "password": "pwaaaaaaaaaa", "lang": "ru"},
+            )
+            assert r.status_code == 200, r.text
+            assert len(cap.sent) == 1
+            ru = cap.sent[0]
+            assert ru["subject"] == "Подтвердите email на Retellis"
+            assert ru["body"] is not None
+            # Russian body cues + the link are present; English cues are not.
+            assert "подтвердить" in ru["body"]
+            assert ru["link"] in ru["body"]
+            assert "Confirm your Retellis" not in ru["body"]
+
+            # A second signup without lang → English (the default).
+            await ac.post(
+                "/v1/auth/signup",
+                json={"email": "bob@example.com", "password": "pwaaaaaaaaaa"},
+            )
+            en = cap.sent[1]
+            assert en["subject"] == "Confirm your Retellis email"
+            assert en["body"] is not None
+            assert "confirm your email address" in en["body"]
+            assert "Подтвердите" not in en["body"]
+    finally:
+        _restore(cap)
+
+
+async def test_resend_uses_passed_lang(make_verify_app, app_client) -> None:
+    cap = _install_capture()
+    try:
+        app = make_verify_app()
+        async with app_client(app) as ac:
+            await ac.post(
+                "/v1/auth/signup",
+                json={"email": "alice@example.com", "password": "pwaaaaaaaaaa", "lang": "en"},
+            )
+            assert cap.sent[0]["subject"] == "Confirm your Retellis email"
+            # Resend in Russian → the second email is Russian even though the
+            # signup email was English (the user switched the UI language).
+            await ac.post(
+                "/v1/auth/verify-email/resend",
+                json={"email": "alice@example.com", "lang": "ru"},
+            )
+            assert len(cap.sent) == 2
+            assert cap.sent[1]["subject"] == "Подтвердите email на Retellis"
+    finally:
+        _restore(cap)
 
 
 # --- resend (non-enumerating) ---------------------------------------------

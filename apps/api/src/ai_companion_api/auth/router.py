@@ -84,6 +84,7 @@ async def signup(body: LocalSignupRequest, request: Request) -> JSONResponse:
             password=body.password,
             display_name=body.display_name,
             user_agent=request.headers.get("user-agent"),
+            lang=body.lang,
         )
     except AuthError as e:
         raise HTTPException(status_code=e.status_code, detail=e.detail) from e
@@ -242,7 +243,9 @@ async def resend_verification(body: ResendVerificationRequest, request: Request)
     # non-enumerating contract — surfacing it would let a probe distinguish
     # "known unverified (send attempted)" from "unknown (no send)".
     try:
-        await send_verification_email(settings, request.app.state.auth_store, body.email)
+        await send_verification_email(
+            settings, request.app.state.auth_store, body.email, lang=body.lang
+        )
     except Exception:  # noqa: BLE001 — never enumerate; log for diagnosability
         import logging
 

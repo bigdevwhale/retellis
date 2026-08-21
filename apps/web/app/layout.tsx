@@ -49,10 +49,19 @@ export const viewport: Viewport = {
 // markup the user actually saw. Any localStorage write goes through
 // the providers as before.
 //
+// Language defaulting: a saved ``companion.lang`` preference always wins.
+// With no saved preference, the boot script sniffs the browser language
+// (``navigator.languages[0]`` / ``navigator.language``) — ru* → 'ru',
+// anything else → 'en'. LangProvider picks up ``document.documentElement
+// .lang`` as its initial state, so the UI opens in the browser language
+// on first visit; the first effect tick persists that choice to
+// ``companion.lang`` so a later browser-language change does not override
+// an explicit UI toggle.
+//
 // Because the boot script mutates <html> attributes before hydration,
 // React will still log a server/client mismatch; ``suppressHydrationWarning``
 // on <html> silences that expected, intentional difference.
-const themeBoot = `(function(){try{var t=localStorage.getItem('companion.theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}var l=localStorage.getItem('companion.lang');if(l==='en'||l==='ru'){document.documentElement.lang=l;}}catch(e){}})();`;
+const themeBoot = `(function(){try{var t=localStorage.getItem('companion.theme');if(t==='dark'||t==='light'){document.documentElement.setAttribute('data-theme',t);}var l=localStorage.getItem('companion.lang');if(l==='en'||l==='ru'){document.documentElement.lang=l;}else{var nl=(navigator.languages&&navigator.languages[0])||navigator.language||'';document.documentElement.lang=(nl.toLowerCase().indexOf('ru')===0)?'ru':'en';}}catch(e){}})();`;
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Read the session cookie presence server-side so AppShell can pick the

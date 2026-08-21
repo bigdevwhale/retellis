@@ -338,8 +338,13 @@ export const useStore = create<State>((set, get) => ({
       return { customPersonas: remaining, activePersonaId };
     }),
 
-  convos: CONVOS.map((c) => ({ ...c })),
-  activeConvoId: 'c1',
+  // K6: do NOT seed fixture convos at init. The fixtures previously flashed in
+  // the sidebar for the brief window before hydrateConvos() replaced them with
+  // the server list ("4 чужих диалога" on chat entry). The sidebar is empty
+  // until the server list lands; the offline fallback (catch block below) seeds
+  // fixtures only when the API is down AND there is no local state yet.
+  convos: [],
+  activeConvoId: '',
   openConvo: (id) => {
     const c = get().convos.find((x) => x.id === id);
     if (c) {
@@ -547,8 +552,13 @@ export const useStore = create<State>((set, get) => ({
         hydrated: true,
       });
     } catch (err) {
-      // API down / offline: leave the seeded fixtures in place as a dev/offline
-      // fallback. Do NOT set hydrated so a later retry can still hydrate.
+      // API down / offline: if there's no local state yet, seed the fixtures as a
+      // dev/offline fallback so the sidebar isn't empty. Existing convos (e.g. a
+      // just-minted local chat) are left in place. Do NOT set hydrated so a later
+      // retry can still hydrate.
+      if (get().convos.length === 0) {
+        set({ convos: CONVOS.map((c) => ({ ...c })), activeConvoId: 'c1' });
+      }
       console.warn('hydrateConvos failed; using fixture fallback', err);
     }
   },

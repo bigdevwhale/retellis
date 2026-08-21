@@ -36,6 +36,39 @@ logger = logging.getLogger(__name__)
 
 VERIFY_SUBJECT = "Confirm your Retellis email"
 
+# Localized subject + body for the verification email. ``lang`` is the UI
+# language the user signed up / re-sent in ("en" | "ru"); unknown → English.
+# The body states the link's TTL derived from settings so the hint stays
+# honest if an operator tunes ``AUTH_EMAIL_VERIFICATION_TTL_SECONDS``.
+_VERIFY_SUBJECTS = {
+    "en": "Confirm your Retellis email",
+    "ru": "Подтвердите email на Retellis",
+}
+
+
+def _verify_body(lang: str, link: str, ttl_seconds: int) -> str:
+    hours = max(1, round(ttl_seconds / 3600))
+    if lang == "ru":
+        return (
+            "Добро пожаловать в Retellis!\n\n"
+            "Перейдите по ссылке ниже, чтобы подтвердить свой адрес email:\n\n"
+            f"{link}\n\n"
+            f"Ссылка действительна {hours} ч.\n\n"
+            "Если вы не создавали аккаунт, просто проигнорируйте это письмо."
+        )
+    return (
+        "Welcome to Retellis!\n\n"
+        "Click the link below to confirm your email address:\n\n"
+        f"{link}\n\n"
+        f"This link expires in {hours} hours.\n\n"
+        "If you didn't create an account, you can ignore this email."
+    )
+
+
+def _normalize_lang(lang: str | None) -> str:
+    code = (lang or "en").strip().lower()
+    return code if code in ("en", "ru") else "en"
+
 
 def _secret(settings: Settings) -> str:
     """Verification signing secret. Falls back to the magic-link secret so an
@@ -74,6 +107,7 @@ async def send_verification_email(
     store: AuthStore,
     email: str,
     *,
+    lang: str | None = None,
     transport: EmailTransport | None = None,
 ) -> None:
     """Email a verification link to ``email`` if (and only if) a local account
@@ -81,7 +115,10 @@ async def send_verification_email(
     endpoint non-enumerating (unknown email ⇒ same ``{ok:true}`` as a known
     one, and no mail is sent to a stranger). Never raises on user state; a
     transport failure (e.g. SMTP down) does propagate to the caller so the
-    signup/resend path surfaces it."""
+    signup/resend path surfaces it.
+
+    ``lang`` ("en" | "ru") localizes the subject + body to the UI language the
+    user signed up / re-sent in; unknown/None → English."""
     email = email.strip().lower()
     if not email:
         return
@@ -93,6 +130,9 @@ async def send_verification_email(
         return
     token = issue_token(settings, email)
     link = verify_url(settings, token)
+    lng = _normalize_lang(lang)
+    subject = _VERIFY_SUBJECTS[lng]
+    body = _verify_body(lng, link, settings.auth_email_verification_ttl_seconds)
     # Resolved via the module attribute so tests can monkeypatch
     # ``magic_link.default_transport`` (same pattern as the family-invite flow).
     t = transport or magic_link.default_transport(settings)
@@ -100,7 +140,7 @@ async def send_verification_email(
     # shape, so it would sail past redaction). Same discipline as the console
     # magic-link transport.
     logger.info("verification email issued for %s", email)
-    await t.send(to=email, link=link, subject=VERIFY_SUBJECT)
+    await t.send(to=email, link=link, subject=subject, body=body)
 
 
 __all__ = [

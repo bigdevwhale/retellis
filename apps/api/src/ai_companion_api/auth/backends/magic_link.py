@@ -34,13 +34,17 @@ MAGIC_LINK_TTL_SECONDS = 15 * 60  # 15 minutes
 
 
 class EmailTransport(Protocol):
-    async def send(self, *, to: str, link: str, subject: str | None = None) -> None: ...
+    async def send(
+        self, *, to: str, link: str, subject: str | None = None, body: str | None = None
+    ) -> None: ...
 
 
 class ConsoleEmailTransport:
     """Default for local/dev: print the magic link so the operator can click it."""
 
-    async def send(self, *, to: str, link: str, subject: str | None = None) -> None:
+    async def send(
+        self, *, to: str, link: str, subject: str | None = None, body: str | None = None
+    ) -> None:
         # Log ONLY the recipient — never the link. The link carries the sealed
         # ``?token=…`` login credential, which has no ``sk-``/``AIza``/``Bearer``
         # shape and so sails past ``redaction.RedactingFilter``. Structured logs
@@ -57,14 +61,17 @@ class SMTPEmailTransport:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
 
-    async def send(self, *, to: str, link: str, subject: str | None = None) -> None:
+    async def send(
+        self, *, to: str, link: str, subject: str | None = None, body: str | None = None
+    ) -> None:
         s = self.settings
         msg = EmailMessage()
         msg["Subject"] = subject or "Your Retellis sign-in link"
         msg["From"] = s.smtp_from or "noreply@retellis.local"
         msg["To"] = to
         msg.set_content(
-            f"Click to sign in to Retellis:\n\n{link}\n\nThis link expires in 15 minutes."
+            body
+            or f"Click to sign in to Retellis:\n\n{link}\n\nThis link expires in 15 minutes."
         )
         # smtplib is blocking; run in a thread to avoid stalling the event loop.
         import asyncio
@@ -101,7 +108,9 @@ class SMTPEmailTransport:
 
 
 class _OffTransport:
-    async def send(self, *, to: str, link: str, subject: str | None = None) -> None:
+    async def send(
+        self, *, to: str, link: str, subject: str | None = None, body: str | None = None
+    ) -> None:
         raise AuthError(503, "email transport is off; cannot send magic link")
 
 

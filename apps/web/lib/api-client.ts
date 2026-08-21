@@ -560,6 +560,7 @@ export function localSignup(body: {
   email: string;
   password: string;
   display_name?: string;
+  lang?: string;
 }): Promise<Principal> {
   return jsonFetch<Principal>('/v1/auth/signup', {
     method: 'POST',
@@ -607,10 +608,10 @@ export function logout(): Promise<void> {
  * when `config.features.email_verification` is on, so a 404 here is a
  * config drift / stale-session case — surface it as a generic error).
  */
-export function resendVerificationEmail(email: string): Promise<{ ok: boolean }> {
+export function resendVerificationEmail(email: string, lang?: string): Promise<{ ok: boolean }> {
   return jsonFetch<{ ok: boolean }>('/v1/auth/verify-email/resend', {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, lang }),
   });
 }
 

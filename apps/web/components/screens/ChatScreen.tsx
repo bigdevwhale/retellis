@@ -48,6 +48,7 @@ export function ChatScreen() {
   const setConvoPreview = useStore((s) => s.setConvoPreview);
   const newChat = useStore((s) => s.newChat);
   const hydrateConvos = useStore((s) => s.hydrateConvos);
+  const hydrated = useStore((s) => s.hydrated);
   const loadConvoMessages = useStore((s) => s.loadConvoMessages);
   const touchConvo = useStore((s) => s.touchConvo);
   const openNewChatPicker = useStore((s) => s.openNewChatPicker);
@@ -143,8 +144,12 @@ export function ChatScreen() {
   };
 
   useEffect(() => {
+    // K6: don't mint a fresh chat until the server convo list has hydrated —
+    // otherwise a stray empty convo flashes before the real list lands (and,
+    // on the empty-server case, hydrateConvos itself mints the first chat).
+    if (!hydrated) return;
     if (!convo) newChat(activePersonaId);
-  }, [convo, activePersonaId, newChat]);
+  }, [hydrated, convo, activePersonaId, newChat]);
 
   // K6: hydrate the conversation list from the server once on mount so the
   // drawer survives a refresh (the server, not fixtures, is the source of
