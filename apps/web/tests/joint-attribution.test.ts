@@ -24,19 +24,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/chat',
 }));
 
-vi.mock('@/lib/speech', () => ({
-  useSpeech: () => ({
-    supported: false,
-    listening: false,
-    interim: '',
-    autoSpeak: false,
-    startListen: vi.fn(),
-    stopListen: vi.fn(),
-    speak: vi.fn(),
-    toggleAutoSpeak: vi.fn(),
-  }),
-}));
-
 vi.mock('@/lib/llm-client', () => ({
   streamChat: vi.fn(async () => {}),
 }));

@@ -28,21 +28,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/chat',
 }));
 
-// speech is observed by ChatScreen; stub it so we don't touch the real
-// SpeechSynthesis API in the happy-dom env.
-vi.mock('@/lib/speech', () => ({
-  useSpeech: () => ({
-    supported: false,
-    listening: false,
-    interim: '',
-    autoSpeak: false,
-    startListen: vi.fn(),
-    stopListen: vi.fn(),
-    speak: vi.fn(),
-    toggleAutoSpeak: vi.fn(),
-  }),
-}));
-
 vi.mock('@/lib/llm-client', () => ({
   streamChat: vi.fn(async () => {}),
 }));

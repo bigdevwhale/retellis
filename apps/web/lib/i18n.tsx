@@ -454,7 +454,6 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Общая сессия со всей семьёй — сначала настройте семью.',
   },
   'np.family.open': { en: 'Open family therapy →', ru: 'Открыть семейную терапию →' },
-  'chat.autospeak': { en: 'Auto-speak replies', ru: 'Озвучивать ответы' },
   'chat.memory': { en: 'Memory on', ru: 'Память вкл.' },
   'chat.memory.on': { en: 'Memory on', ru: 'Память вкл.' },
   'chat.memory.off': { en: 'Memory off', ru: 'Память выкл.' },
@@ -462,7 +461,6 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     en: 'Whether the companion recalls past events and memories when replying. Extraction still happens either way.',
     ru: 'Будет ли собеседник опираться на прошлые события и воспоминания в ответе. Само извлечение памяти происходит в любом случае.',
   },
-  'chat.voice': { en: 'Voice mode', ru: 'Голосовой режим' },
   // Composer key indicator (OD `keyind`): an honest read of the active key
   // source. Never shows a fake key fingerprint — the client only holds an
   // opaque key_handle (NOT the plaintext key; the plaintext lives
@@ -477,18 +475,11 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   // on/off is real client state. No fabricated chain count.
   'chat.meta.injected': { en: 'persona: injected', ru: 'персона: встроена' },
   'chat.placeholder': {
-    en: 'Write or speak to Aria… (Enter to send)',
-    ru: 'Напишите или продиктуйте Арии… (Enter — отправить)',
+    en: 'Write to Aria… (Enter to send)',
+    ru: 'Напишите Арии… (Enter — отправить)',
   },
-  'chat.listening': { en: 'Listening… speak naturally', ru: 'Слушаю… говорите естественно' },
   'chat.thinking': { en: 'Aria is thinking…', ru: 'Ария думает…' },
-  'chat.keepgoing': {
-    en: 'Tap send, or keep talking',
-    ru: 'Нажмите «Отправить» или продолжайте говорить',
-  },
   'chat.stop': { en: 'Stop', ru: 'Стоп' },
-  'chat.voicefail': { en: 'Voice unavailable', ru: 'Голос недоступен' },
-  'chat.speak': { en: 'Speak', ru: 'Озвучить' },
   'chat.copy': { en: 'Copy', ru: 'Копировать' },
   'chat.copied': { en: 'Copied', ru: 'Скопировано' },
   'chat.nokey': {
@@ -1359,7 +1350,6 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   'pr.done': { en: 'complete', ru: 'готово' },
   'pr.pause': { en: 'Pause', ru: 'Пауза' },
   'pr.resume': { en: 'Resume', ru: 'Продолжить' },
-  'pr.speak.cues': { en: 'Speak the intro', ru: 'Озвучить вступление' },
   // --- OD practices.html port: page head, session meta, honest limit line ---
   'pr.offline': { en: 'offline', ru: 'офлайн' },
   'pr.cycles.label': { en: 'cycles', ru: 'циклов' },

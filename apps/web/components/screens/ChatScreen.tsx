@@ -10,7 +10,6 @@ import { streamChat } from '@/lib/llm-client';
 import { explainLlmError } from '@/lib/llm-errors';
 import { stripMarkdown } from '@/lib/markdown';
 import { resetFamilyVault, resetPersonalVault } from '@/lib/reset';
-import { useSpeech } from '@/lib/speech';
 import { convoFamilyVisibility, useStore } from '@/lib/store';
 import { toast } from '@/lib/toast';
 import Link from 'next/link';
@@ -40,7 +39,7 @@ const JOINT_POLL_MS = 8000;
 const JOINT_SEND_COOLDOWN_MS = 4000;
 
 export function ChatScreen() {
-  const { t, L2, lang } = useLang();
+  const { t, L2 } = useLang();
   const convos = useStore((s) => s.convos);
   const activeConvoId = useStore((s) => s.activeConvoId);
   const activePersonaId = useStore((s) => s.activePersonaId);
@@ -142,17 +141,6 @@ export function ChatScreen() {
     if (!el) return;
     pinnedRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
   };
-
-  const {
-    supported,
-    listening,
-    interim,
-    autoSpeak,
-    startListen,
-    stopListen,
-    speak,
-    toggleAutoSpeak,
-  } = useSpeech(lang);
 
   useEffect(() => {
     if (!convo) newChat(activePersonaId);
@@ -616,7 +604,6 @@ export function ChatScreen() {
       setTyping(false);
       if (full) {
         appendMessage(cid, { them: true, t: { en: full, ru: full }, ts: now() });
-        if (autoSpeak) speak(stripMarkdown(full));
       }
     };
 
@@ -725,8 +712,7 @@ export function ChatScreen() {
         // bubble with a localized "[message truncated]" suffix so the user
         // sees the turn was interrupted, not silently dropped. No new wire
         // surface; this is a client-side finalize of what was already
-        // streamed. The suffix rides along in autoSpeak so a voice user
-        // hears the cutoff too.
+        // streamed.
         finalize(accRef.current + L2({ en: ' [message truncated]', ru: ' [сообщение обрезано]' }));
       } else {
         finalizedRef.current = true;
@@ -795,7 +781,6 @@ export function ChatScreen() {
       const full = partial + L2({ en: ' [message truncated]', ru: ' [сообщение обрезано]' });
       setStreaming(null);
       appendMessage(cid, { them: true, t: { en: full, ru: full }, ts: now() });
-      if (autoSpeak) speak(stripMarkdown(full));
     } else {
       setStreaming(null);
     }
@@ -851,8 +836,8 @@ export function ChatScreen() {
             ru: 'Чат выключен — добавьте ключ в настройках, чтобы начать.',
           })
         : L2({
-            en: `Write or speak to ${persona.name}… (Enter to send)`,
-            ru: `Напишите или скажите ${persona.name}… (Enter — отправить)`,
+            en: `Write to ${persona.name}… (Enter to send)`,
+            ru: `Напишите ${persona.name}… (Enter — отправить)`,
           }),
     [L2, persona.name, noKey, softNudge],
   );
@@ -1135,19 +1120,24 @@ export function ChatScreen() {
             <h3>{persona.name}</h3>
             <div className="meta">
               {(() => {
-                // Headline model line. Three states, in order:
+                // Headline model line. States, in order:
                 //  1. A real model is selected by the user → show it.
                 //  2. A provider exists but the model is empty (the user
                 //     cleared the field) → fall back to the provider kind.
-                //  3. No provider at all (no key, no provider row) →
-                //     "no key" in plain language so the user isn't told
-                //     "stand-in" without context. The old "stand-in" copy
-                //     was confusing — the user took it to mean the server
-                //     is offline rather than "no BYOK connected yet".
+                //  3. No provider at all (no key, no provider row):
+                //    - hosted: show the role alone — the user chats on the
+                //      operator env fallback (trial credits / OpenRouter), so
+                //      "no key" is misleading. There is no client-visible
+                //      "no key" on hosted personal scope.
+                //    - self-hosted: "no key" in plain language so the user
+                //      isn't told "stand-in" without context. The old
+                //      "stand-in" copy was confusing — the user took it to
+                //      mean the server is offline rather than "no BYOK yet".
                 const model = isFam ? familyProvider?.model : activeProvider?.model;
                 const kind = isFam ? familyProvider?.kind : activeProvider?.kind;
                 if (model) return `${L2(persona.role)} · ${model}`;
                 if (kind) return `${L2(persona.role)} · ${kind}`;
+                if (hosted) return L2(persona.role);
                 return `${L2(persona.role)} · ${L2({ en: 'no key', ru: 'нет ключа' })}`;
               })()}
               {/* OD `thread__meta` second line — honest architecture flags, not
@@ -1256,25 +1246,6 @@ export function ChatScreen() {
           <div className="right">
             <button
               type="button"
-              className={`speak-btn${autoSpeak ? ' on' : ''}`}
-              title={t('chat.autospeak')}
-              aria-label={t('chat.autospeak')}
-              aria-pressed={autoSpeak}
-              onClick={toggleAutoSpeak}
-            >
-              <svg
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.7}
-              >
-                <path d="M11 5L6 9H3v6h3l5 4V5z" />
-                <path d="M16 9a4 4 0 0 1 0 6" />
-              </svg>
-            </button>
-            <button
-              type="button"
               className={`btn btn-sm btn-ghost${memoryOn ? ' memory-on' : ''}`}
               title={t('chat.memory.tip')}
               aria-pressed={memoryOn}
@@ -1380,23 +1351,6 @@ export function ChatScreen() {
                   {m.them ? <Markdown>{L2(m.t)}</Markdown> : L2(m.t)}
                   {m.them && (
                     <div className="msg-them-actions">
-                      <button
-                        type="button"
-                        className="mini"
-                        onClick={() => speak(stripMarkdown(L2(m.t)))}
-                      >
-                        <svg
-                          aria-hidden="true"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth={1.8}
-                        >
-                          <path d="M11 5L6 9H3v6h3l5 4V5z" />
-                          <path d="M16 9a4 4 0 0 1 0 6" />
-                        </svg>
-                        {t('chat.speak')}
-                      </button>
                       <button
                         type="button"
                         className="mini"
@@ -1509,23 +1463,6 @@ export function ChatScreen() {
               </div>
             </div>
           )}
-        </div>
-
-        <div className={`listening-bar${listening ? ' on' : ''}`}>
-          <div className="wave">
-            {Array.from({ length: 9 }).map((_, i) => (
-              <i key={i} />
-            ))}
-          </div>
-          <span>{interim ? t('chat.keepgoing') : t('chat.listening')}</span>
-          <button
-            type="button"
-            className="mini"
-            style={{ marginLeft: 'auto' }}
-            onClick={stopListen}
-          >
-            {t('chat.stop')}
-          </button>
         </div>
 
         <div className="chat-locked-banner-wrap">
@@ -1672,58 +1609,31 @@ export function ChatScreen() {
           (envelope-encrypted); the opaque key_handle is NOT the key, so we
           never render a fake `sk-•••3a2f` fingerprint (that would be
           performative). We surface the provider kind + connected/no-key + a
-          change link. */}
-        <div className="chat-keyind" aria-live="polite">
-          <span className="keyind">
-            <span className="k">BYOK</span>
-            {noKey ? (
-              <span className="v v-none">{t('chat.keyind.none')}</span>
-            ) : (
-              <span className="v">
-                {KIND_LABEL[isFam ? (familyProvider?.kind ?? '') : (activeProvider?.kind ?? '')] ??
-                  L2({ en: 'key', ru: 'ключ' })}{' '}
-                · {t('chat.keyind.connected')}
-              </span>
-            )}
-            <Link href={isFam ? '/family?tab=settings&subtab=key' : '/onboarding'}>
-              {t('chat.keyind.change')}
-            </Link>
-          </span>
-        </div>
+          change link. Hidden on hosted: a hosted user chats on the operator
+          env fallback (trial credits / OpenRouter) and has no BYOK key to
+          speak of, so the "BYOK / no key / change" bar is misleading there. */}
+        {!hosted && (
+          <div className="chat-keyind" aria-live="polite">
+            <span className="keyind">
+              <span className="k">BYOK</span>
+              {noKey ? (
+                <span className="v v-none">{t('chat.keyind.none')}</span>
+              ) : (
+                <span className="v">
+                  {KIND_LABEL[
+                    isFam ? (familyProvider?.kind ?? '') : (activeProvider?.kind ?? '')
+                  ] ?? L2({ en: 'key', ru: 'ключ' })}{' '}
+                  · {t('chat.keyind.connected')}
+                </span>
+              )}
+              <Link href={isFam ? '/family?tab=settings&subtab=key' : '/onboarding'}>
+                {t('chat.keyind.change')}
+              </Link>
+            </span>
+          </div>
+        )}
 
         <div className="composer">
-          <button
-            type="button"
-            className={`mic${listening ? ' on' : ''}`}
-            title={
-              noKey && !softNudge
-                ? t('chat.voicefail')
-                : supported
-                  ? t('chat.voice')
-                  : t('chat.voicefail')
-            }
-            aria-label={
-              noKey && !softNudge
-                ? t('chat.voicefail')
-                : supported
-                  ? t('chat.voice')
-                  : t('chat.voicefail')
-            }
-            aria-pressed={listening}
-            disabled={!supported || (noKey && !softNudge)}
-            onClick={() => (listening ? stopListen() : startListen((txt) => setInput(txt)))}
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.7}
-            >
-              <rect x="9" y="3" width="6" height="11" rx="3" />
-              <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-            </svg>
-          </button>
           <textarea
             ref={taRef}
             className="input"

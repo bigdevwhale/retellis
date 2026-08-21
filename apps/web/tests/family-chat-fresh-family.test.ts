@@ -44,19 +44,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/chat',
 }));
 
-vi.mock('@/lib/speech', () => ({
-  useSpeech: () => ({
-    supported: false,
-    listening: false,
-    interim: '',
-    autoSpeak: false,
-    startListen: vi.fn(),
-    stopListen: vi.fn(),
-    speak: vi.fn(),
-    toggleAutoSpeak: vi.fn(),
-  }),
-}));
-
 // Capture what streamChat was called with so the test can assert the body shape.
 let streamCalls: Array<{ body: Record<string, unknown> }> = [];
 vi.mock('../lib/llm-client', () => ({

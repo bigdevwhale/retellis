@@ -2089,38 +2089,11 @@ select:focus {
     flex-basis: 100%;
   }
 }
-.speak-btn {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--label);
-  width: 36px;
-  height: 36px;
-  border-radius: var(--r);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: all 0.2s var(--ease);
-}
-.speak-btn:hover {
-  color: var(--purple);
-  border-color: var(--purple);
-}
-.speak-btn.on {
-  color: var(--purple);
-  border-color: var(--purple);
-  background: var(--purple-tint);
-  box-shadow: var(--shadow-soft);
-}
 /* Memory-on toggle in the chat header: active state reads as "engaged". */
 .btn.memory-on {
   color: var(--purple);
   border-color: var(--purple);
   background: var(--purple-tint);
-}
-.speak-btn svg {
-  width: 17px;
-  height: 17px;
 }
 .stream {
   flex: 1;
@@ -2633,101 +2606,6 @@ select:focus {
 .composer .send svg {
   width: 18px;
   height: 18px;
-}
-.mic {
-  flex: none;
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  appearance: none;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  color: var(--label);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  transition: all 0.2s var(--ease);
-}
-.mic:hover {
-  color: var(--purple);
-  border-color: var(--purple);
-}
-.mic.on {
-  background: linear-gradient(135deg, var(--purple), var(--magenta));
-  color: #fff;
-  border-color: transparent;
-  box-shadow: var(--shadow-glow);
-}
-.mic svg {
-  width: 18px;
-  height: 18px;
-}
-.mic[disabled] {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-.listening-bar {
-  display: none;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 18px;
-  border-top: 1px solid var(--border);
-  background: var(--purple-tint);
-  color: var(--purple);
-  font-size: 13px;
-}
-.listening-bar.on {
-  display: flex;
-  animation: rise 0.3s var(--ease);
-}
-.wave {
-  display: flex;
-  gap: 3px;
-  align-items: center;
-  height: 24px;
-}
-.wave i {
-  width: 3px;
-  background: var(--purple);
-  border-radius: 2px;
-  animation: wave 1s ease-in-out infinite;
-  height: 6px;
-}
-.wave i:nth-child(1) {
-  animation-delay: 0s;
-}
-.wave i:nth-child(2) {
-  animation-delay: 0.1s;
-}
-.wave i:nth-child(3) {
-  animation-delay: 0.2s;
-}
-.wave i:nth-child(4) {
-  animation-delay: 0.3s;
-}
-.wave i:nth-child(5) {
-  animation-delay: 0.4s;
-}
-.wave i:nth-child(6) {
-  animation-delay: 0.5s;
-}
-.wave i:nth-child(7) {
-  animation-delay: 0.4s;
-}
-.wave i:nth-child(8) {
-  animation-delay: 0.3s;
-}
-.wave i:nth-child(9) {
-  animation-delay: 0.2s;
-}
-@keyframes wave {
-  0%,
-  100% {
-    height: 6px;
-  }
-  50% {
-    height: 22px;
-  }
 }
 
 .scrim {

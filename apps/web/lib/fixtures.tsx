@@ -633,19 +633,6 @@ export const FEATURES: { ic: ReactNode; title: Localized; desc: Localized }[] = 
   {
     ic: (
       <>
-        <rect x="9" y="3" width="6" height="11" rx="3" />
-        <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-      </>
-    ),
-    title: { en: 'Voice conversations', ru: 'Голосовые разговоры' },
-    desc: {
-      en: 'Speak naturally. Your companion listens and answers out loud when you want.',
-      ru: 'Говорите как есть. Компаньон слушает и отвечает вслух, когда захотите.',
-    },
-  },
-  {
-    ic: (
-      <>
         <circle cx="12" cy="8" r="4" />
         <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
       </>
@@ -677,10 +664,10 @@ export const HOW: { n: string; title: Localized; desc: Localized }[] = [
   },
   {
     n: '02',
-    title: { en: 'Talk or write', ru: 'Говорите или пишите' },
+    title: { en: 'Write freely', ru: 'Пишите свободно' },
     desc: {
-      en: 'By text or voice. Whatever feels easier today.',
-      ru: 'Текстом или голосом. Как сегодня проще.',
+      en: 'By text, whenever it feels easier today.',
+      ru: 'Текстом — когда сегодня так проще.',
     },
   },
   {
@@ -717,7 +704,6 @@ export const PLANS: Plan[] = [
     },
     features: [
       { en: 'All companions & custom ones', ru: 'Все компаньоны и свои' },
-      { en: 'Voice in & out', ru: 'Голос туда и обратно' },
       { en: 'Local encrypted key vault', ru: 'Локальное зашифрованное хранилище ключей' },
       { en: 'Self-host or run locally', ru: 'Свой хостинг или локально' },
       { en: 'Community support', ru: 'Поддержка сообщества' },
@@ -739,7 +725,6 @@ export const PLANS: Plan[] = [
       { en: 'Hosted keys — no setup', ru: 'Хостинг-ключи — без настройки' },
       { en: 'Priority routing across 6 models', ru: 'Приоритетная маршрутизация по 6 моделям' },
       { en: 'Deeper memory (90-day chains)', ru: 'Глубокая память (цепочки 90 дней)' },
-      { en: 'Voice conversations', ru: 'Голосовые разговоры' },
       { en: 'Email support', ru: 'Поддержка по почте' },
     ],
     ctaKey: 'pl.plus.cta',

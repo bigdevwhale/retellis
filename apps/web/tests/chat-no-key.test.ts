@@ -24,19 +24,6 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/chat',
 }));
 
-vi.mock('@/lib/speech', () => ({
-  useSpeech: () => ({
-    supported: false,
-    listening: false,
-    interim: '',
-    autoSpeak: false,
-    startListen: vi.fn(),
-    stopListen: vi.fn(),
-    speak: vi.fn(),
-    toggleAutoSpeak: vi.fn(),
-  }),
-}));
-
 vi.mock('@/lib/llm-client', () => ({
   streamChat: vi.fn(async () => {}),
 }));
@@ -309,6 +296,10 @@ describe('ChatScreen — no-key lockout', () => {
     expect(banner).not.toBeNull();
     const link = banner!.querySelector('a') as HTMLAnchorElement | null;
     expect(link!.getAttribute('href')).toBe('/onboarding');
+
+    // Self-hosted shows the BYOK keyind (no key + change link) above the
+    // composer — it is honest signal for a user who must connect a key.
+    expect(container!.querySelector('.chat-keyind')).not.toBeNull();
   });
 
   it('enables the composer when the personal provider is configured', async () => {
@@ -497,6 +488,14 @@ describe('ChatScreen — hosted lazy onboarding (composer enabled, no banner)', 
     // No lockout banner on hosted personal scope — the user simply chats on
     // the operator fallback; no nudge, no reset affordance.
     expect(container!.querySelector('.chat-locked-banner')).toBeNull();
+
+    // Hosted hides the BYOK keyind bar — chat runs on the operator env
+    // fallback (trial credits / OpenRouter), so the "BYOK / no key / change"
+    // indicator is misleading. The chat head also drops its "no key" suffix
+    // on hosted (asserted via the head text below).
+    expect(container!.querySelector('.chat-keyind')).toBeNull();
+    const head = container!.querySelector('.chat-head');
+    expect((head?.textContent ?? '').toLowerCase()).not.toMatch(/no key|нет ключа/);
   });
 
   it('still hard-locks the family persona with no family key on hosted (a shared key is not deferrable)', async () => {

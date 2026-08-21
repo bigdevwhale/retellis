@@ -4,15 +4,13 @@
 // like Opera Air's wellness menu. Fully client-side: no LLM, no backend, no
 // network — these are standalone tools, not companion turns. The breathing
 // pacer is a CSS-transitioned circle driven by a phase state machine; the
-// meditation timer is a countdown with a WebAudio bell (no audio asset) and an
-// optional spoken intro via the browser's SpeechSynthesis (speech.ts).
+// meditation timer is a countdown with a WebAudio bell (no audio asset).
 //
 // Tone follows the product contract: instructions tell the user what to do,
 // they never have the companion "perform" calm or empathy ("disclose, don't
 // perform").
 
 import { useLang } from '@/lib/i18n';
-import { useSpeech } from '@/lib/speech';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -287,16 +285,8 @@ function BreathingPacer() {
 }
 
 function MeditationTimer() {
-  const { t, lang } = useLang();
+  const { t } = useLang();
   const bell = useBell();
-  const { speak } = useSpeech(lang);
-  // speechSynthesis (TTS) is the only capability the "Speak the intro"
-  // control needs; useSpeech.supported would also require SpeechRecognition,
-  // which is too strict for a speak-only button, so we gate on TTS alone.
-  const [tts, setTts] = useState(false);
-  useEffect(() => {
-    setTts(typeof window !== 'undefined' && 'speechSynthesis' in window);
-  }, []);
 
   const [durationMin, setDurationMin] = useState(5);
   const [themeId, setThemeId] = useState('breath');
@@ -506,16 +496,6 @@ function MeditationTimer() {
       <div className="pr-instruction">{t(theme.cueKey)}</div>
 
       <div className="practice-actions">
-        {tts && (
-          <button
-            type="button"
-            className="btn"
-            onClick={() => speak(t(theme.cueKey))}
-            disabled={running}
-          >
-            {t('pr.speak.cues')}
-          </button>
-        )}
         {running ? (
           <button type="button" className="btn" onClick={pause} aria-label={t('pr.pause')}>
             {t('pr.pause')}
