@@ -454,13 +454,14 @@ describe('ChatScreen — no-key lockout', () => {
   });
 });
 
-describe('ChatScreen — hosted lazy onboarding (soft nudge, not lockout)', () => {
+describe('ChatScreen — hosted lazy onboarding (composer enabled, no banner)', () => {
   beforeEach(() => {
     // Hosted mode: a missing *personal* key is not a hard lockout — the
     // routing chain falls through to the operator env fallback (trial credits
     // / OpenRouter) or MockAdapter, so the app always answers. The composer
-    // stays enabled and a soft nudge shows. Keyed on `mode === 'hosted'`, NOT
-    // `features.billing` — the trial path works with billing off.
+    // stays enabled and NO lockout banner shows on personal scope. Keyed on
+    // `mode === 'hosted'`, NOT `features.billing` — the trial path works with
+    // billing off.
     getAuthConfigMock = vi.fn<() => Promise<AuthConfig>>(async () => ({
       mode: 'hosted',
       profile: 'local',
@@ -477,7 +478,7 @@ describe('ChatScreen — hosted lazy onboarding (soft nudge, not lockout)', () =
     }));
   });
 
-  it('keeps the personal composer enabled with no BYOK key and shows a soft nudge (no reset button)', async () => {
+  it('keeps the personal composer enabled with no BYOK key and shows NO lockout banner', async () => {
     await mountAndSettle(() => {
       useStore.setState({
         activePersonaId: 'aria',
@@ -489,21 +490,13 @@ describe('ChatScreen — hosted lazy onboarding (soft nudge, not lockout)', () =
 
     const textarea = container!.querySelector('textarea') as HTMLTextAreaElement | null;
     expect(textarea).not.toBeNull();
-    // Composer is ENABLED on hosted — chat works via env/mock fallback.
+    // Composer is ENABLED on hosted — chat works via the operator env
+    // fallback (trial credits / OpenRouter).
     expect(textarea!.disabled).toBe(false);
 
-    // The soft nudge banner renders and links to onboarding.
-    const banner = container!.querySelector('.chat-locked-banner') as HTMLElement | null;
-    expect(banner).not.toBeNull();
-    const link = banner!.querySelector('a') as HTMLAnchorElement | null;
-    expect(link).not.toBeNull();
-    expect(link!.getAttribute('href')).toBe('/onboarding');
-
-    // No scary "Reset? Wipe keys" affordance on a soft nudge — the user
-    // simply hasn't added a key yet.
-    const buttons = Array.from(banner!.querySelectorAll('button'));
-    const resetBtn = buttons.find((b) => /Reset\?|Сбросить\?/i.test(b.textContent ?? ''));
-    expect(resetBtn).toBeUndefined();
+    // No lockout banner on hosted personal scope — the user simply chats on
+    // the operator fallback; no nudge, no reset affordance.
+    expect(container!.querySelector('.chat-locked-banner')).toBeNull();
   });
 
   it('still hard-locks the family persona with no family key on hosted (a shared key is not deferrable)', async () => {
@@ -551,10 +544,9 @@ describe('ChatScreen — hosted lazy onboarding (soft nudge, not lockout)', () =
     expect(textarea).not.toBeNull();
     expect(textarea!.disabled).toBe(false);
 
-    const banner = container!.querySelector('.chat-locked-banner') as HTMLElement | null;
-    expect(banner).not.toBeNull();
-    const link = banner!.querySelector('a') as HTMLAnchorElement | null;
-    expect(link).not.toBeNull();
-    expect(link!.getAttribute('href')).toBe('/onboarding');
+    // No lockout banner on hosted — composer is enabled, chat works on the
+    // operator fallback. (Previously this hard-locked because `hosted` was
+    // derived from `features.billing`.)
+    expect(container!.querySelector('.chat-locked-banner')).toBeNull();
   });
 });

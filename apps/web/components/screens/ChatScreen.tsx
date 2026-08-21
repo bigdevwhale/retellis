@@ -944,18 +944,12 @@ export function ChatScreen() {
       };
     }
     // Hosted lazy onboarding: no personal key yet, but the chain falls through
-    // to env keys / MockAdapter — chat works. Show a soft, non-blocking nudge
-    // (no scary "Reset? Wipe keys" affordance — they simply haven't added a
-    // key yet). Self-hosted keeps the hard lockout + reset path below.
+    // to the operator env fallback (trial credits / OpenRouter) — chat works,
+    // so there is nothing to banner here. `softNudge` (above) keeps the
+    // composer enabled; we show NO lockout banner on hosted personal scope.
+    // Self-hosted keeps the hard lockout + reset path below.
     if (hosted) {
-      return {
-        msg: L2({
-          en: "You're chatting on shared keys. Add your own any time for full control.",
-          ru: 'Вы общаетесь на общих ключах. Добавьте свой в любое время для полного контроля.',
-        }),
-        href: '/onboarding',
-        link: L2({ en: 'Add your key →', ru: 'Добавить ключ →' }),
-      };
+      return null;
     }
     return {
       msg: L2({
