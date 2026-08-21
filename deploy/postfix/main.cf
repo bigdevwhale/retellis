@@ -11,7 +11,9 @@
 myhostname = retellis.com
 myorigin = $myhostname
 inet_interfaces = all
-inet_protocols = all
+# ipv4 only — the compose network is IPv4, and avoiding IPv6 bind avoids edge
+# cases in containers that lack a routable ::1.
+inet_protocols = ipv4
 
 # retellis.com is NOT a local destination — this is send-only, no mailboxes.
 # Setting mydestination to localhost (not $myhostname) keeps outgoing mail to
@@ -21,6 +23,15 @@ mydestination = localhost
 # Trust the whole compose network. Safe only because port 25 is not published
 # to the host/internet (the open-relay guard is the no-publish, not this list).
 mynetworks = 0.0.0.0/0 [::]/0
+
+# Open-relay guard (REQUIRED). Postfix refuses to start smtpd — fatal on every
+# connect, then master throttles the service and port 25 stops greeting — unless
+# the recipient/relay restrictions contain a relay-blocking rule. We trust
+# mynetworks (the api container) and reject unauth destination for everyone else.
+# External clients can't reach port 25 anyway (not published), so this is defense
+# in depth on top of the no-publish guard.
+smtpd_relay_restrictions = permit_mynetworks, reject_unauth_destination
+smtpd_recipient_restrictions = permit_mynetworks, reject_unauth_destination
 
 # Direct internet delivery (empty relayhost = resolve MX ourselves).
 relayhost =
