@@ -134,9 +134,9 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
       # STARTTLS policy for the SMTP transport: ``required`` (default — external
-      # providers on 587), ``if_supported`` (upgrade if advertised), or ``never``
-      # (plain SMTP — the internal postfix relay below on port 25, no TLS cert).
-      # Port 465 is implicit TLS (SMTPS) and ignores this setting.
+      # providers on 587, and Selectel Email Service on 1126), ``if_supported``
+      # (upgrade if advertised), or ``never`` (plain SMTP, no TLS cert). Port
+      # 465 is implicit TLS (SMTPS) and ignores this setting.
       SMTP_STARTTLS: ${SMTP_STARTTLS:-required}
       FEATURE_EMAIL_VERIFICATION: ${FEATURE_EMAIL_VERIFICATION:-0}
       AUTH_EMAIL_VERIFICATION_SECRET: ${AUTH_EMAIL_VERIFICATION_SECRET:-}
@@ -199,26 +199,14 @@ services:
       # (precompressed gzip) instead of the chunked Next.js stream.
       - next_static:/srv/static
 
-  # Internal send-only mail relay for email verification (and magic-link, when
-  # enabled). Port 25 is NOT published to the host — only other containers on
-  # this compose network can reach it, which is what keeps it from being an open
-  # relay (the guard is the no-publish, not mynetworks). The api submits with
-  # SMTP_STARTTLS=never + no auth. OpenDKIM signs outgoing mail for retellis.com;
-  # the DKIM keypair is generated on first start and the public-key TXT record
-  # is printed to the container logs (``docker compose logs postfix`` on first
-  # boot). The api does NOT depend_on this service — email send is best-effort
-  # (a transient SMTP failure is swallowed by signup; the user can resend), so
-  # postfix being down never blocks the api from booting.
-  postfix:
-    build:
-      context: .
-      dockerfile: deploy/Dockerfile.postfix
-    restart: unless-stopped
-    # No `ports:` — port 25 stays internal to the compose network.
-    volumes:
-      - postfix_data:/var/spool/postfix
-      - opendkim_keys:/etc/opendkim/keys
-
+  # NOTE: a self-hosted postfix relay used to live here but was removed —
+  # direct outbound delivery from a VPS is blocked on port 25 (and reputation-
+  # poor even when open), and the in-image opendkim 2.11.0 crashes on
+  # Canonicalization. Transactional email now goes through the Selectel Email
+  # Service (smtp.mail.selcloud.ru:1126 STARTTLS) configured via SMTP_* env on
+  # the api, which signs DKIM and handles IP reputation. The old build files
+  # (deploy/Dockerfile.postfix, deploy/postfix/*) are kept as archived reference
+  # but are NOT part of the live stack.
   caddy:
     # Single-origin reverse proxy: TLS + /v1 → api, / → web. This is what makes
     # the SameSite=Lax session cookie first-party and closes the old HTTP-only
@@ -249,5 +237,3 @@ volumes:
   caddy_config:
   companion_data:
   next_static:
-  postfix_data:
-  opendkim_keys:
