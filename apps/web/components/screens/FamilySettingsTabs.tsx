@@ -724,8 +724,8 @@ function FamilyKeyTab({
           zero-knowledge) lives in SECURITY.md, not on this surface. */}
       <p className="help" style={{ marginTop: 12 }}>
         {L2({
-          en: 'The family API key is encrypted in transit and at rest on the server. See SECURITY.md for how keys are stored.',
-          ru: 'Семейный ключ API шифруется при передаче и хранится зашифрованным на сервере. Подробности о хранении ключей — в SECURITY.md.',
+          en: 'The family API key is encrypted in transit and at rest on the server.',
+          ru: 'Семейный ключ API шифруется при передаче и хранится зашифрованным на сервере.',
         })}
       </p>
     </div>

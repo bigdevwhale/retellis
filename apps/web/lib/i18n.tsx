@@ -102,8 +102,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Свои ключи — свой контроль',
   },
   'landing.why.a2.p': {
-    en: 'Your API keys, encrypted in transit and at rest on the server. See SECURITY.md for how keys are stored.',
-    ru: 'Ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере. Подробности о хранении ключей — в SECURITY.md.',
+    en: 'Your API keys, encrypted in transit and at rest on the server.',
+    ru: 'Ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере.',
   },
   'landing.why.a3.h3': { en: 'Family therapy', ru: 'Семейная терапия' },
   'landing.why.a3.p': {
@@ -1376,8 +1376,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Ваши диалоги остаются приватными.',
   },
   'pl.note.s': {
-    en: 'On every plan, your messages are encrypted at rest. We never train on your conversations and never sell data. Cancel anytime — your memory export is yours to keep. How keys are stored is documented in SECURITY.md.',
-    ru: 'На любом тарифе сообщения шифруются при хранении. Мы не обучаемся на ваших диалогах и не продаём данные. Отменить можно в любой момент — экспорт памяти остаётся у вас. Хранение ключей описано в SECURITY.md.',
+    en: 'On every plan, your messages are encrypted at rest. We never train on your conversations and never sell data. Cancel anytime — your memory export is yours to keep.',
+    ru: 'На любом тарифе сообщения шифруются при хранении. Мы не обучаемся на ваших диалогах и не продаём данные. Отменить можно в любой момент — экспорт памяти остаётся у вас.',
   },
   'pl.free.cta': { en: 'You’re here', ru: 'Вы здесь' },
   'pl.plus.cta': { en: 'Choose Plus', ru: 'Выбрать Plus' },
@@ -1415,8 +1415,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере.',
   },
   'set.vault.docs': {
-    en: 'How are keys stored? See SECURITY.md →',
-    ru: 'Как хранятся ключи? См. SECURITY.md →',
+    en: 'How are keys stored?',
+    ru: 'Как хранятся ключи?',
   },
   // Multi-key BYOK (replaces the single-key empty state with a real action).
   'set.vault.add_key': { en: 'Add a key', ru: 'Добавить ключ' },
@@ -1459,8 +1459,8 @@ export const I18N: Record<string, { en: string; ru: string }> = {
     ru: 'Использовать мой личный ключ',
   },
   'fam.key.use_personal.help': {
-    en: 'Your active personal key serves every family member’s chat. Mutually exclusive with family keys. How keys are stored is documented in SECURITY.md.',
-    ru: 'Ваш активный личный ключ обслуживает чат всех членов семьи. Взаимоисключающе с семейными ключами. Хранение ключей описано в SECURITY.md.',
+    en: 'Your active personal key serves every family member’s chat. Mutually exclusive with family keys.',
+    ru: 'Ваш активный личный ключ обслуживает чат всех членов семьи. Взаимоисключающе с семейными ключами.',
   },
   'fam.key.use_personal.no_personal_key': {
     en: 'You have no personal LLM key yet. Add one in /onboarding first.',

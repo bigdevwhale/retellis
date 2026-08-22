@@ -285,8 +285,8 @@ function FamilyPrimaryScreen({
             <hr style={{ border: 0, borderTop: '1px solid var(--border)', margin: '20px 0' }} />
             <div className="help">
               {L2({
-                en: 'A family lets a small household share one companion. Each member keeps their own private 1:1 chats, and there is one shared "joint" thread everyone in the family can read and write. The joint thread runs on a single shared API key; each member can also connect their own key for their private chats. Keys are encrypted on the server — see SECURITY.md for how they are stored.',
-                ru: 'Семья позволяет небольшому дому делить одного компаньона. У каждого участника остаются личные чаты 1:1, а также есть одна общая «совместная» ветка, которую видят и пишут все члены семьи. Совместная ветка работает на одном общем API-ключе, а для личных чатов каждый может подключить свой ключ. Ключи шифруются на сервере — подробности о хранении в SECURITY.md.',
+                en: 'A family lets a small household share one companion. Each member keeps their own private 1:1 chats, and there is one shared "joint" thread everyone in the family can read and write. The joint thread runs on a single shared API key; each member can also connect their own key for their private chats. Keys are encrypted on the server.',
+                ru: 'Семья позволяет небольшому дому делить одного компаньона. У каждого участника остаются личные чаты 1:1, а также есть одна общая «совместная» ветка, которую видят и пишут все члены семьи. Совместная ветка работает на одном общем API-ключе, а для личных чатов каждый может подключить свой ключ. Ключи шифруются на сервере.',
               })}
             </div>
           </div>

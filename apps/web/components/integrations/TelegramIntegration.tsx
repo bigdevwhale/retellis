@@ -213,8 +213,8 @@ export function TelegramIntegration({ messengers, onChanged, L2 }: Props) {
 
         <p className="help" style={{ marginTop: 8 }}>
           {L2({
-            en: 'The bot token and your API keys are encrypted in transit and at rest on the server. See SECURITY.md for how keys are stored.',
-            ru: 'Токен бота и ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере. Подробности о хранении ключей — в SECURITY.md.',
+            en: 'The bot token and your API keys are encrypted in transit and at rest on the server.',
+            ru: 'Токен бота и ваши API-ключи шифруются при передаче и хранятся зашифрованными на сервере.',
           })}
         </p>
 

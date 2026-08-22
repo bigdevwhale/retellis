@@ -73,6 +73,13 @@ const PRIMARY_TABS: Tab[] = [
   { href: '/persona', key: 'navtab.personas', icon: PersonasIcon },
 ];
 
+// Authed users don't see the Home tab — they redirect server-side to /chat.
+function filterPrimaryTabs(authed: boolean): Tab[] {
+  return authed
+    ? PRIMARY_TABS.filter((tab) => tab.href !== '/')
+    : PRIMARY_TABS;
+}
+
 // Secondary tabs — config + billing surfaces, shown under the "More" dropdown.
 const SECONDARY_TABS: Tab[] = [
   { href: '/routing', key: 'navtab.routing', icon: RoutingIcon },
@@ -135,7 +142,7 @@ export function TopBar() {
   ];
   // The mobile sheet lists every tab (primary + secondary) flat — no dropdown
   // on the sheet itself.
-  const allTabs: Tab[] = [...PRIMARY_TABS, ...secondary];
+  const allTabs: Tab[] = [...filterPrimaryTabs(authed), ...secondary];
   const moreActive = secondary.some((tab) => isActive(tab.href));
 
   return (
@@ -151,7 +158,7 @@ export function TopBar() {
       </Link>
 
       <nav className="topbar-links" aria-label="Primary">
-        {PRIMARY_TABS.map((tab) => (
+        {filterPrimaryTabs(authed).map((tab) => (
           <Link
             key={tab.key}
             href={tab.href}
