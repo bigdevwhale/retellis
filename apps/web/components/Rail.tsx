@@ -151,7 +151,10 @@ export function Rail() {
   const billing = !!config?.features.billing;
 
   const items = useMemo(() => {
-    const base = authed ? NAV : NAV.filter((it) => it.screen === 'home' || it.screen === 'plans');
+    // Authed users don't see Home — they redirect server-side to /chat
+    const base = authed
+      ? NAV.filter((it) => it.screen !== 'home')
+      : NAV.filter((it) => it.screen === 'home' || it.screen === 'plans');
     return base
       .filter((it) => it.screen !== 'plans' || billing)
       .map((it) => {
