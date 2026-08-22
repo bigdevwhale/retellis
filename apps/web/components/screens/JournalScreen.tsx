@@ -49,9 +49,13 @@ type Draft = {
   mood: string;
   tags: string[];
   matters: 0 | 1 | 2 | 3;
+  // Provenance: which chat conversation/event this entry was seeded from.
+  // Preserved until save so source_convo_id/source_event_id are persisted correctly.
+  convoId: string | null;
+  eventId: string | null;
 };
 
-const EMPTY_DRAFT: Draft = { title: '', body: '', mood: '', tags: [], matters: 0 };
+const EMPTY_DRAFT: Draft = { title: '', body: '', mood: '', tags: [], matters: 0, convoId: null, eventId: null };
 
 // The journal is persona-agnostic by design — a quiet, common diary surface,
 // not per-companion. The row's NOT-NULL ``persona_id`` still needs a value, so
@@ -143,6 +147,8 @@ function loadDraft(): Draft | null {
       mood: typeof d.mood === 'string' ? d.mood : '',
       tags: Array.isArray(d.tags) ? (d.tags as string[]) : [],
       matters: d.matters === 1 || d.matters === 2 || d.matters === 3 ? d.matters : 0,
+      convoId: typeof d.convoId === 'string' ? d.convoId : null,
+      eventId: typeof d.eventId === 'string' ? d.eventId : null,
     };
   } catch {
     return null;
@@ -392,9 +398,16 @@ export function JournalScreen() {
           mood: opts.entry.mood ?? '',
           tags: [...opts.entry.tags],
           matters: SALIENCE_TO_LEVEL(opts.entry.salience),
+          convoId: opts.entry.source_convo_id,
+          eventId: opts.entry.source_event_id,
         });
       } else if (opts.seed) {
-        setDraft({ ...EMPTY_DRAFT, body: opts.seed.text });
+        setDraft({
+          ...EMPTY_DRAFT,
+          body: opts.seed.text,
+          convoId: opts.seed.convoId,
+          eventId: opts.seed.eventId,
+        });
       } else if (opts.prompt) {
         setDraft(EMPTY_DRAFT);
       } else {
@@ -436,8 +449,8 @@ export function JournalScreen() {
           mood: draft.mood.trim() || null,
           tags: draft.tags,
           salience: MATTERS_TO_SALIENCE[draft.matters],
-          source_convo_id: journalSeed?.convoId ?? null,
-          source_event_id: journalSeed?.eventId ?? null,
+          source_convo_id: draft.convoId,
+          source_event_id: draft.eventId,
         });
         setEntries((prev) => [created, ...prev]);
         clearDraft();
