@@ -2,19 +2,18 @@
 
 ``GET /v1/routing`` returns a ``RoutingState`` assembled here from:
 
-- the **chain** — the live fallback ladder the stream walks (BYOK → env → Ollama
-  → mock), minus the per-turn BYOK node (the dashboard is not tied to a turn);
+- the **chain** — the live fallback ladder the stream walks (BYOK → env → Ollama),
+  minus the per-turn BYOK node (the dashboard is not tied to a turn);
 - the **budget** — current-month spend vs ``monthly_budget_usd`` with soft-warn
   (≥80%) and hard-stop (≥100%) flags;
 - the **per-provider summary** — requests / cost / tokens rolled up from the
   ``usage`` rows;
 - a **Langfuse link-out** to the browser-facing trace UI.
 
-The chain always ends in the mock stand-in (a real node, typed ``str`` so the
-mock case is honest). Unconfigured env providers are simply absent from the
-chain — they are not tried. Ollama is always shown: ``standby`` when no
-``ollama_base_url`` is set (the documented last-resort, not live), ``healthy``
-when configured.
+The chain shows configured providers only. Unconfigured env providers are
+absent from the chain — they are not tried. Ollama is always shown: ``standby``
+when no ``ollama_base_url`` is set (the documented last-resort, not live),
+``healthy`` when configured.
 """
 
 from __future__ import annotations
@@ -31,8 +30,6 @@ from .budget import BudgetState, compute_budget
 
 def _kind_status(settings: Settings, kind: str) -> str:
     """Dashboard status for a provider kind given current settings."""
-    if kind == "mock":
-        return "healthy"
     if kind == "ollama":
         return "healthy" if settings.ollama_base_url else "standby"
     # env kind — healthy iff still configured, else unavailable (it has usage
@@ -41,21 +38,22 @@ def _kind_status(settings: Settings, kind: str) -> str:
 
 
 def display_chain(settings: Settings) -> list[RoutingNode]:
-    """The live fallback ladder for the dashboard (BYOK omitted; mock last)."""
+    """The live fallback ladder for the dashboard (BYOK omitted)."""
     nodes: list[RoutingNode] = []
     for kind in configured_env_kinds(settings):
         nodes.append(
             RoutingNode(kind=kind, model=DEFAULT_MODELS[kind], base_url=None, status="healthy")
         )
-    nodes.append(
-        RoutingNode(
-            kind="ollama",
-            model=DEFAULT_MODELS["ollama"],
-            base_url=settings.ollama_base_url or None,
-            status="healthy" if settings.ollama_base_url else "standby",
+    # Only show Ollama if it's configured
+    if settings.ollama_base_url:
+        nodes.append(
+            RoutingNode(
+                kind="ollama",
+                model=DEFAULT_MODELS["ollama"],
+                base_url=settings.ollama_base_url,
+                status="healthy",
+            )
         )
-    )
-    nodes.append(RoutingNode(kind="mock", model="mock", base_url=None, status="healthy"))
     return nodes
 
 

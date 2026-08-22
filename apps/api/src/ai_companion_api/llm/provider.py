@@ -1,18 +1,18 @@
 r"""Provider resolution + the fallback chain — the security-critical precedence:
 
-    BYOK enc_key_blob  →  LITELLM_API_KEY_<KIND> env  →  Ollama (local)  →  mock
+    BYOK enc_key_blob  →  LITELLM_API_KEY_<KIND> env  →  Ollama (local)
 
 ``build_chain`` returns the ordered list of ``RoutingCandidate`` objects for a
-turn, ending in the mock stand-in so a turn always completes. BYOK wins even if
-env keys are present; the env ladder is tried in a stable order; Ollama is a
-last-resort local node (no key, ``base_url`` only) added when
-``ollama_base_url`` is configured; mock is always last.
+turn. BYOK wins even if env keys are present; the env ladder is tried in a
+stable order; Ollama is a last-resort local node (no key, ``base_url`` only)
+added when ``ollama_base_url`` is configured. If no providers are configured,
+the chain is empty.
 
 The decrypted BYOK key is held on the BYOK candidate's ``decrypted`` field as a
 ``DecryptedKey`` whose ``api_key`` bytearray the router zeroizes *after* the
 chain run completes (even if BYOK failed and a later candidate served the turn).
 Env keys are server-configured ``str`` and are not zeroized (they live in
-settings for the process lifetime). Mock never holds a key.
+settings for the process lifetime).
 
 ``resolve_provider`` (Phase 2 single-shot resolution) remains as a thin wrapper
 over ``build_chain`` for backward compatibility.
@@ -26,7 +26,6 @@ from ..config import Settings
 from ..vault.decrypt import DecryptedKey, DecryptError, decrypt_key_blob
 from ..vault.session_ecdh import SessionECDH
 from .litellm_adapter import LiteLLMAdapter
-from .mock_adapter import MockAdapter
 from .types import LlmAdapter
 
 # Default model per provider kind. For OpenRouter/Ollama the litellm model string
@@ -54,7 +53,6 @@ DEFAULT_MODELS: dict[str, str] = {
     # chat turn on a default-pick provider doesn't land on a 200k-context
     # Sonnet out of the box.
     "bedrock": "bedrock/anthropic.claude-3-5-haiku-20241022-v1:0",
-    "mock": "mock",
 }
 
 # P2: cheap sibling per provider kind for UTILITY calls (salience judge — a
@@ -133,6 +131,22 @@ class ResolvedProvider:
 
 class ProviderResolutionError(Exception):
     """Raised when the BYOK blob is present but undecryptable. Redacted message."""
+
+
+class NoProviderAvailableError(Exception):
+    """Raised when no LLM providers are configured or all providers failed.
+
+    This is distinct from ProviderResolutionError (which is about an undecryptable
+    BYOK blob). NoProviderAvailableError means the routing chain is empty or all
+    candidates exhausted, and the turn cannot be served.
+
+    The exception carries a user-facing reason and suggested action.
+    """
+
+    def __init__(self, reason: str, user_action: str):
+        self.reason = reason
+        self.user_action = user_action
+        super().__init__(f"{reason}. {user_action}")
 
 
 def _env_key(settings: Settings, kind: str) -> str | None:
@@ -314,17 +328,6 @@ def build_chain(
             )
         )
 
-    # 4) Mock stand-in — always last, so a turn always completes.
-    cands.append(
-        RoutingCandidate(
-            kind="mock",
-            model=DEFAULT_MODELS["mock"],
-            base_url=None,
-            adapter=MockAdapter(),
-            is_mock=True,
-            decrypted=None,
-        )
-    )
     return cands
 
 

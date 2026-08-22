@@ -13,10 +13,7 @@ const KIND_LABEL: Record<string, string> = {
   ollama: 'Ollama',
 };
 
-// The chain's terminal node is the local fallback (no external LLM) — name it
-// honestly in the UI instead of the technical "mock" from the API.
 function chainNodeLabel(kind: string, t: (k: string) => string): string {
-  if (kind === 'mock') return t('rt.chain.local');
   return KIND_LABEL[kind] ?? kind;
 }
 

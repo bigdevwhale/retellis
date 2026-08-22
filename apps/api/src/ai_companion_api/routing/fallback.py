@@ -1,20 +1,17 @@
 """Fallback chain runner — walk the candidates, fall over on failure.
 
 ``run_with_fallback`` tries each ``RoutingCandidate`` in order. On a
-``LlmCallError`` (provider 429 / 5xx / timeout / connection refused) from a
-real provider it yields a ``("fallback", (from_kind, to_kind, reason))`` tag and
-continues to the next candidate. The chain always ends in the mock stand-in, so
-a turn always completes; if the mock itself raises (it never should) the error
-propagates honestly rather than being swallowed.
+``LlmCallError`` (provider 429 / 5xx / timeout / connection refused) it yields
+a ``("fallback", (from_kind, to_kind, reason))`` tag and continues to the next
+candidate. If all candidates fail, the error from the last candidate is
+raised.
 
 The runner also records the last fallback per user (``fallback_last_turn``) so
-the routing dashboard can show "openai → mock (rate-limited)" without keeping
-per-request logs.
+the routing dashboard can show "openai → anthropic (rate-limited)" without
+keeping per-request logs.
 
-Budget hard-stop is *not* handled here — the caller (``routers/llm.py``)
-truncates the chain to ``[mock]`` and emits a single ``fallback`` event with
-reason ``"budget hard-stop"`` before invoking the runner. This keeps the runner
-pure: it walks whatever chain it is given.
+Budget hard-stop is *not* handled here — the caller (``routers/llm.py``) should
+reject the request before invoking the runner.
 """
 
 from __future__ import annotations
@@ -51,13 +48,14 @@ async def run_with_fallback(
     """Walk the chain. Yields:
 
     - ``("token", str)`` for each streamed token,
-    - ``("fallback", (from_kind, to_kind, reason))`` when a real provider fails
+    - ``("fallback", (from_kind, to_kind, reason))`` when a provider fails
       and the chain advances,
     - ``("served", RoutingCandidate)`` for the candidate that completed the turn
       (so the caller can read its ``last_usage()`` for the usage event).
 
-    The final candidate must be the mock stand-in. A successful candidate ends
-    the turn; a failed real candidate yields a fallback tag and continues.
+    A successful candidate ends the turn; a failed candidate yields a fallback
+    tag and continues. If all candidates fail, the error from the last is
+    raised.
     """
     for i, cand in enumerate(candidates):
         try:
@@ -66,13 +64,9 @@ async def run_with_fallback(
             yield ("served", cand)
             return  # success — stop the chain
         except LlmCallError as exc:
-            if cand.is_mock:
-                # The mock stand-in never calls a network — if it raised, the
-                # process is in a state we won't paper over. Propagate honestly.
-                raise
             nxt = candidates[i + 1] if i + 1 < len(candidates) else None
             if nxt is None:
-                raise  # nothing left to fall back to (shouldn't happen; mock is last)
+                raise  # nothing left to fall back to
             reason = redact(str(exc))
             yield ("fallback", (cand.kind, nxt.kind, reason))
             record_fallback(user_id, f"{cand.kind} → {nxt.kind} ({reason})")

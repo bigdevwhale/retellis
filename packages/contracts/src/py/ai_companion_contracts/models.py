@@ -243,9 +243,8 @@ class Usage(BaseModel):
     # against the family budget (per `family_id`), not the individual member.
     # None for personal sessions; the rollup falls back to `user_id` then.
     family_id: str | None = None
-    # ``ProviderKind`` or ``"mock"`` — the mock adapter is not a provider but
-    # still emits a usage row (cost 0). Typed ``str`` so the mock case is honest.
-    provider_kind: str
+    # ProviderKind — the adapter that served the turn.
+    provider_kind: ProviderKind
     model: str
     prompt_tokens: int
     completion_tokens: int
@@ -253,18 +252,16 @@ class Usage(BaseModel):
 
 
 class RoutingNode(BaseModel):
-    # ``ProviderKind`` or ``"mock"`` — the chain always ends in the mock
-    # stand-in, which is a real node. Typed ``str`` so the mock case is honest.
-    kind: str
+    # ProviderKind — the provider kind for this chain node.
+    kind: ProviderKind
     model: str
     base_url: str | None = None
     status: Literal["healthy", "standby", "unavailable"] = "standby"
 
 
 class ProviderSummary(BaseModel):
-    # ``ProviderKind`` or ``"mock"`` — the mock adapter still emits a usage row
-    # (cost 0) and appears in the per-provider table. Typed ``str`` to be honest.
-    kind: str
+    # ProviderKind — the provider kind for this summary.
+    kind: ProviderKind
     model: str
     requests: int
     cost_usd: float
@@ -350,16 +347,16 @@ class TokenEvent(BaseModel):
 
 class FallbackEvent(BaseModel):
     type: Literal["fallback"]
-    # ``ProviderKind`` or ``"mock"`` — a fallback can land on the mock stand-in.
-    from_kind: str
-    to_kind: str
+    # ProviderKind — fallback transitions between real providers only.
+    from_kind: ProviderKind
+    to_kind: ProviderKind
     reason: str
 
 
 class UsageEvent(BaseModel):
     type: Literal["usage"]
-    # ``ProviderKind`` or ``"mock"`` — see ``Usage.provider_kind``.
-    provider_kind: str
+    # ProviderKind — see Usage.provider_kind.
+    provider_kind: ProviderKind
     model: str
     prompt_tokens: int
     completion_tokens: int

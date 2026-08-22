@@ -202,9 +202,8 @@ export const Usage = z.object({
   // up against the family budget (per `family_id`), not the individual member.
   // Null for personal sessions; the rollup falls back to `user_id` in that case.
   family_id: z.string().nullable().nullish(),
-  // ProviderKind or 'mock' — the mock adapter is not a provider but still
-  // emits a usage row (cost 0). Typed string so the mock case is honest.
-  provider_kind: z.string(),
+  // ProviderKind — the adapter that served the turn.
+  provider_kind: ProviderKind,
   model: z.string(),
   prompt_tokens: z.number().int(),
   completion_tokens: z.number().int(),
@@ -213,9 +212,8 @@ export const Usage = z.object({
 export type Usage = z.infer<typeof Usage>;
 
 export const RoutingNode = z.object({
-  // ProviderKind or 'mock' — the chain always ends in the mock stand-in, which
-  // is a real node. Typed string so the mock case is honest.
-  kind: z.string(),
+  // ProviderKind — the provider kind for this chain node.
+  kind: ProviderKind,
   model: z.string(),
   base_url: z.string().nullable().nullish(),
   status: z.enum(['healthy', 'standby', 'unavailable']).default('standby'),
@@ -223,9 +221,8 @@ export const RoutingNode = z.object({
 export type RoutingNode = z.infer<typeof RoutingNode>;
 
 export const ProviderSummary = z.object({
-  // ProviderKind or 'mock' — the mock adapter still emits a usage row (cost 0)
-  // and appears in the per-provider table. Typed string so the mock case is honest.
-  kind: z.string(),
+  // ProviderKind — the provider kind for this summary.
+  kind: ProviderKind,
   model: z.string(),
   requests: z.number().int(),
   cost_usd: z.number(),
@@ -302,15 +299,15 @@ export const SessionEvent = z.object({
 export const TokenEvent = z.object({ type: z.literal('token'), text: z.string() });
 export const FallbackEvent = z.object({
   type: z.literal('fallback'),
-  // ProviderKind or 'mock' — a fallback can land on the mock stand-in.
-  from_kind: z.string(),
-  to_kind: z.string(),
+  // ProviderKind — fallback transitions between real providers only.
+  from_kind: ProviderKind,
+  to_kind: ProviderKind,
   reason: z.string(),
 });
 export const UsageEvent = z.object({
   type: z.literal('usage'),
-  // ProviderKind or 'mock' — see Usage.provider_kind.
-  provider_kind: z.string(),
+  // ProviderKind — see Usage.provider_kind.
+  provider_kind: ProviderKind,
   model: z.string(),
   prompt_tokens: z.number().int(),
   completion_tokens: z.number().int(),

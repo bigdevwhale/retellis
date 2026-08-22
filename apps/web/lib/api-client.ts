@@ -78,8 +78,8 @@ export type ProviderRecord = {
   // ECDH-sealed BYOK key as the chat call.
   embeddings_model: string | null;
   // Zero-knowledge at-rest backup (base64 salt||nonce||ct). Present when the
-  // client opted into sync; null for older rows / mock provider. Used only to
-  // restore the vault after a browser cache wipe.
+  // client opted into sync; null for older rows. Used only to restore the vault
+  // after a browser cache wipe.
   enc_blob: string | null;
 };
 
@@ -373,7 +373,7 @@ export function wipePersonaMemory(personaId: string): Promise<void> {
 // --- Routing & budget ---
 
 export type RoutingNode = {
-  kind: string; // ProviderKind or 'mock'
+  kind: string; // ProviderKind
   model: string;
   base_url: string | null;
   status: 'healthy' | 'standby' | 'unavailable';

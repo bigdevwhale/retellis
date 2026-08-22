@@ -1104,10 +1104,9 @@ export const I18N: Record<string, { en: string; ru: string }> = {
   },
   'rt.configchip': { en: 'config, not probing', ru: 'конфигурация, не пинг' },
   'rt.chain.title': { en: 'Provider order', ru: 'Порядок провайдеров' },
-  'rt.chain.local': { en: 'Local fallback', ru: 'Локальный резерв' },
   'rt.chain.sub': {
-    en: 'ordered · local fallback last',
-    ru: 'по порядку · локальный резерв в конце',
+    en: 'ordered by priority',
+    ru: 'по порядку приоритета',
   },
   // Short note shown on the surface; the longer "how routing decides" detail
   // (rt.chain.note) lives inside a collapsed <details> in RoutingScreen.

@@ -1,9 +1,9 @@
 """LLM adapters and provider resolution."""
 
 from .litellm_adapter import LiteLLMAdapter, LlmCallError
-from .mock_adapter import MockAdapter
 from .provider import (
     DEFAULT_MODELS,
+    NoProviderAvailableError,
     ProviderResolutionError,
     ResolvedProvider,
     RoutingCandidate,
@@ -19,7 +19,7 @@ __all__ = [
     "LlmAdapter",
     "LlmCallError",
     "LlmUsage",
-    "MockAdapter",
+    "NoProviderAvailableError",
     "ProviderResolutionError",
     "ResolvedProvider",
     "RoutingCandidate",

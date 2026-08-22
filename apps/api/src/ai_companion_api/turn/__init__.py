@@ -193,7 +193,7 @@ async def _post_turn(
     atomic memories. Consolidation / era / relationship-note are omitted on the
     messenger path for MVP (they ride the web cadence; a post-MVP lift wires
     them here). Never raises — best-effort, same contract as the web path."""
-    if served_cand is None or getattr(served_cand, "is_mock", True):
+    if served_cand is None:
         return
     try:
         judged = await judge_salience(
@@ -361,7 +361,8 @@ async def run_turn(
     budget = compute_budget(spent_usd=spent, monthly_budget_usd=settings.monthly_budget_usd)
     run_cands = cands
     if budget.hard_stop:
-        run_cands = [c for c in cands if c.is_mock]
+        # Budget exceeded → no providers available (BYOK is also blocked)
+        run_cands = []
 
     # --- Run the chain inside the BYOK zeroize window. ---
     async def _drive():

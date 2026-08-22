@@ -69,7 +69,7 @@ from ..deps import (
     get_settings,
     get_store,
 )
-from ..llm import ProviderResolutionError, build_chain
+from ..llm import NoProviderAvailableError, ProviderResolutionError, build_chain
 from ..llm.provider import utility_model_for
 from ..memory import adaptive, append_event, build_context, chains_to_messages
 from ..memory.consolidate import maybe_consolidate, maybe_consolidate_eras
@@ -502,7 +502,7 @@ async def _post_turn_work(
     are scoped by the same family tuple as the turn (server-side filter on
     the family/visibility/participant predicate), so a turn only sees its own
     scope's recall and only mutates its own scope's memories."""
-    if served_cand is None or getattr(served_cand, "is_mock", True):
+    if served_cand is None:
         return None, None
     try:
         # P2: the judge is a simple classification — it runs on the kind's
@@ -801,17 +801,19 @@ async def _stream(
         # (Cyrillic → Russian) — a user in crisis must not get a template in
         # a language they may not read.
         yield _evt({"type": "token", "text": crisis_msg})
+        # Use the first configured provider kind for usage tracking, or openai as default
+        provider_kind_for_usage = "openai"  # Crisis resources don't consume real API quota
         usage = Usage(
             id=uuid.uuid4().hex,
             user_id=user_id,
             family_id=family_id,
-            provider_kind="mock",
+            provider_kind=provider_kind_for_usage,
             model="safety-screen",
             prompt_tokens=0,
             completion_tokens=0,
             cost_usd=0.0,
         )
-        yield _evt(_usage_evt(usage, "mock", "safety-screen"))
+        yield _evt(_usage_evt(usage, provider_kind_for_usage, "safety-screen"))
         yield _evt({"type": "done"})
         if not skip_persist:
             try:
@@ -1087,17 +1089,13 @@ async def _stream(
         open_loops=open_loops_msg,
     )
 
-    # --- Phase 4: budget hard-stop OR hosted out-of-credits → skip real
-    # providers, serve mock. Self-hosted uses the monthly budget meter only;
-    # hosted also gates on the Principal's credit balance (entitlement). ---
+    # --- Phase 4: budget hard-stop OR hosted out-of-credits → reject request. ---
     # Family turns roll up spend against the family budget (per family_id);
     # personal turns roll up against the personal budget (per user_id). The
     # two scopes are disjoint at the row level (a personal turn has
     # family_id IS NULL, a family turn has family_id == F).
-    run_cands = cands
     spent = await spend_task
     budget = compute_budget(spent_usd=spent, monthly_budget_usd=settings.monthly_budget_usd)
-    first_real = next((c for c in cands if not c.is_mock), None)
     out_of_credits = (
         settings.deployment_mode == "hosted"
         and principal is not None
@@ -1109,29 +1107,29 @@ async def _stream(
     # credit balance. Free / self-hosted users keep the budget hard-stop. See
     # ``routing/entitlement.py`` for the plan-string discriminator.
     subscriber = is_paid_subscriber(principal, settings)
-    gate_reason = None
-    keep_byok = False  # out-of-credits exempts BYOK (the user's own key costs the operator nothing)
+
+    # Budget hard-stop or out-of-credits → reject with HTTP 402
     if budget.hard_stop and not subscriber:
-        gate_reason = "budget hard-stop (monthly cap reached)"
-    elif out_of_credits:
-        gate_reason = "out of credits"
-        # Credits are the user's prepaid balance for operator-provided providers.
-        # BYOK is the user's own key — it consumes no operator credits, so the
-        # credits gate must not cut it: keep BYOK (+ mock as the safety net) and
-        # paywall only operator-provided env-fallback / Ollama nodes. A free
-        # hosted user with their own key keeps working; only env-fallback is
-        # gated. (The budget hard-stop above is unchanged — it is the operator's
-        # global monthly cap, a separate concern.)
-        keep_byok = True
-    cut_to_mock = False
-    if gate_reason is not None:
-        run_cands = [c for c in cands if c.is_mock or (keep_byok and c.decrypted is not None)]
-        # The turn is only forced to mock when no BYOK candidate survives the
-        # gate. When BYOK survives it serves the turn (mock is just the safety
-        # net), so no gate→mock fallback is emitted or recorded.
-        cut_to_mock = not any(c.decrypted is not None for c in run_cands)
-        if cut_to_mock and first_real is not None:
-            record_fallback(user_id, f"{first_real.kind} → mock ({gate_reason})")
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "Monthly budget exceeded",
+                "spent_usd": round(spent, 2),
+                "budget_usd": settings.monthly_budget_usd,
+                "message": f"You've spent ${round(spent, 2)} of your ${settings.monthly_budget_usd} monthly budget. Please top up your credits or wait for next month.",
+            },
+        )
+    if out_of_credits:
+        raise HTTPException(
+            status_code=402,
+            detail={
+                "error": "Insufficient credits",
+                "credits_usd": round(principal.credits_usd, 2) if principal else 0,
+                "message": "Your credits are exhausted. Purchase a subscription to continue.",
+            },
+        )
+
+    run_cands = cands
 
     assistant_text = ""
     served = None

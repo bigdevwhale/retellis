@@ -22,7 +22,6 @@ const KIND_LABEL: Record<string, string> = {
   google: 'Google',
   openrouter: 'OpenRouter',
   ollama: 'Ollama',
-  mock: 'local fallback',
 };
 
 function now() {

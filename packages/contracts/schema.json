@@ -554,18 +554,32 @@
       "type": "object"
     },
     "FallbackEvent": {
+      "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        }
+      },
       "properties": {
         "from_kind": {
-          "title": "From Kind",
-          "type": "string"
+          "$ref": "#/$defs/ProviderKind"
         },
         "reason": {
           "title": "Reason",
           "type": "string"
         },
         "to_kind": {
-          "title": "To Kind",
-          "type": "string"
+          "$ref": "#/$defs/ProviderKind"
         },
         "type": {
           "const": "fallback",
@@ -2123,14 +2137,29 @@
       "type": "object"
     },
     "ProviderSummary": {
+      "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        }
+      },
       "properties": {
         "cost_usd": {
           "title": "Cost Usd",
           "type": "number"
         },
         "kind": {
-          "title": "Kind",
-          "type": "string"
+          "$ref": "#/$defs/ProviderKind"
         },
         "model": {
           "title": "Model",
@@ -2197,6 +2226,22 @@
       "type": "object"
     },
     "RoutingNode": {
+      "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        }
+      },
       "properties": {
         "base_url": {
           "anyOf": [
@@ -2211,8 +2256,7 @@
           "title": "Base Url"
         },
         "kind": {
-          "title": "Kind",
-          "type": "string"
+          "$ref": "#/$defs/ProviderKind"
         },
         "model": {
           "title": "Model",
@@ -2238,6 +2282,20 @@
     },
     "RoutingState": {
       "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        },
         "ProviderSummary": {
           "properties": {
             "cost_usd": {
@@ -2245,8 +2303,7 @@
               "type": "number"
             },
             "kind": {
-              "title": "Kind",
-              "type": "string"
+              "$ref": "#/$defs/ProviderKind"
             },
             "model": {
               "title": "Model",
@@ -2301,8 +2358,7 @@
               "title": "Base Url"
             },
             "kind": {
-              "title": "Kind",
-              "type": "string"
+              "$ref": "#/$defs/ProviderKind"
             },
             "model": {
               "title": "Model",
@@ -2826,6 +2882,22 @@
       "type": "object"
     },
     "Usage": {
+      "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        }
+      },
       "properties": {
         "completion_tokens": {
           "title": "Completion Tokens",
@@ -2860,8 +2932,7 @@
           "type": "integer"
         },
         "provider_kind": {
-          "title": "Provider Kind",
-          "type": "string"
+          "$ref": "#/$defs/ProviderKind"
         },
         "user_id": {
           "title": "User Id",
@@ -2881,6 +2952,22 @@
       "type": "object"
     },
     "UsageEvent": {
+      "$defs": {
+        "ProviderKind": {
+          "enum": [
+            "openai",
+            "anthropic",
+            "google",
+            "openrouter",
+            "ollama",
+            "aihubmix",
+            "azure",
+            "bedrock"
+          ],
+          "title": "ProviderKind",
+          "type": "string"
+        }
+      },
       "properties": {
         "completion_tokens": {
           "title": "Completion Tokens",
@@ -2899,8 +2986,7 @@
           "type": "integer"
         },
         "provider_kind": {
-          "title": "Provider Kind",
-          "type": "string"
+          "$ref": "#/$defs/ProviderKind"
         },
         "type": {
           "const": "usage",

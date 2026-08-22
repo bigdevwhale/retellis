@@ -348,9 +348,9 @@ function JournalSample() {
 
 function RoutingSample() {
   const { L2 } = useLang();
-  // OD routing.html: BYOK→env→ollama→mock, 64% / $0.41 of $0.64, providers,
-  // last fallback. Wrapped in .rt-wrap to reuse the existing scoped
-  // .chain-dense / .budget styles (the real RoutingScreen uses the same).
+  // OD routing.html: BYOK→env→ollama, 64% / $0.41 of $0.64, providers.
+  // Wrapped in .rt-wrap to reuse the existing scoped .chain-dense / .budget
+  // styles (the real RoutingScreen uses the same).
   const providers: {
     name: string;
     hstat: { en: string; ru: string };
@@ -419,8 +419,6 @@ function RoutingSample() {
               <span className="chip">env</span>
               <span className="conn" aria-hidden="true" />
               <span className="chip">ollama</span>
-              <span className="conn" aria-hidden="true" />
-              <span className="chip chip--dim">mock</span>
             </div>
             <p className="chain-note">
               {L2({
