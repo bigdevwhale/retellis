@@ -32,7 +32,7 @@ import pytest
 from ai_companion_contracts import EventRole
 
 import ai_companion_api.llm.provider as prov
-from ai_companion_api.llm import LlmCallError, MockAdapter, RoutingCandidate
+from ai_companion_api.llm import LlmCallError, RoutingCandidate
 from ai_companion_api.llm.types import LlmAdapter, LlmUsage
 from ai_companion_api.memory import InMemoryStore, append_event
 from ai_companion_api.routers import llm as llm_router
@@ -54,9 +54,11 @@ def _types(events: list[dict]) -> list[str]:
     return [e["type"] for e in events]
 
 
-def _force_mock() -> None:
-    """Push the env-fallback off so the mock adapter serves regardless of shell env."""
+def _disable_env_keys() -> None:
+    """Push the env-fallback off so we can inject our own test adapters."""
+    real = prov._env_key
     prov._env_key = lambda settings, kind: None  # noqa: E731
+    return real
 
 
 # --- I1: fallback resets assistant_text (no partial leak) --------------------
@@ -76,9 +78,21 @@ class _PartialFailingAdapter(LlmAdapter):
         return LlmUsage("openai", "gpt-4o-mini", 5, 5, 0.0)
 
 
+class _FallbackAdapter(LlmAdapter):
+    """Simple working adapter for fallback tests."""
+
+    provider_kind = "ollama"
+
+    async def stream(self, messages, model) -> AsyncIterator[str]:  # noqa: ANN001
+        yield "fallback reply"
+        yield ""  # pragma: no cover  # make it an async generator
+
+    def last_usage(self) -> LlmUsage:
+        return LlmUsage("ollama", "llama3.3", 2, 1, 0.0)
+
+
 async def test_i01_fallback_drops_partial_before_persist(client, monkeypatch) -> None:
-    real_env_key = prov._env_key
-    _force_mock()
+    real_env_key = _disable_env_keys()
 
     def fake_build_chain(*, enc_key_blob, settings, ecdh, model=None, byok_decrypted=None):  # noqa: ANN001, ARG001
         return [
@@ -91,11 +105,11 @@ async def test_i01_fallback_drops_partial_before_persist(client, monkeypatch) ->
                 decrypted=None,
             ),
             RoutingCandidate(
-                kind="mock",
-                model="mock",
+                kind="ollama",
+                model="llama3.3",
                 base_url=None,
-                adapter=MockAdapter(),
-                is_mock=True,
+                adapter=_FallbackAdapter(),
+                is_mock=False,
                 decrypted=None,
             ),
         ]
@@ -110,13 +124,13 @@ async def test_i01_fallback_drops_partial_before_persist(client, monkeypatch) ->
 
     types = _types(events)
     assert "fallback" in types
-    # The partial was streamed, THEN a fallback fired, THEN mock tokens came.
+    # The partial was streamed, THEN a fallback fired, THEN fallback tokens came.
     fb_idx = types.index("fallback")
     assert any(
         e["type"] == "token" and e["text"] == "PARTIAL-LEAK-SHOULD-NOT-PERSIST"
         for e in events[:fb_idx]
     )
-    # The persisted assistant row must be the mock reply only — no partial leak.
+    # The persisted assistant row must be the fallback reply only — no partial leak.
     r = await client.get("/v1/memory", params={"persona_id": "aria", "convo_id": "c-i1"})
     rows = r.json()
     assistant = [e for e in rows if e["role"] == "assistant"]
@@ -129,8 +143,7 @@ async def test_i01_fallback_drops_partial_before_persist(client, monkeypatch) ->
 
 
 async def test_i02_no_double_done_when_post_turn_work_throws(client, monkeypatch) -> None:
-    real_env_key = prov._env_key
-    _force_mock()
+    real_env_key = _disable_env_keys()
 
     async def boom(*args, **kwargs):  # noqa: ANN001, ARG001
         raise RuntimeError("judge LLM exploded")
@@ -195,31 +208,26 @@ async def test_i07_concurrent_append_does_not_fork_chain() -> None:
 
 
 async def test_i08_retry_with_same_request_id_does_not_duplicate(client) -> None:
-    real_env_key = prov._env_key
-    _force_mock()
-    try:
-        await _drain(
-            client,
-            {
-                "persona_id": "aria",
-                "convo_id": "c-i8",
-                "message": "remember this turn",
-                "request_id": "req-stable-1",
-            },
-        )
-        # A "retry" with the SAME request_id re-streams (fresh reply) but the
-        # server dedups persistence — no second user+assistant pair, no fork.
-        await _drain(
-            client,
-            {
-                "persona_id": "aria",
-                "convo_id": "c-i8",
-                "message": "remember this turn",
-                "request_id": "req-stable-1",
-            },
-        )
-    finally:
-        prov._env_key = real_env_key
+    await _drain(
+        client,
+        {
+            "persona_id": "aria",
+            "convo_id": "c-i8",
+            "message": "remember this turn",
+            "request_id": "req-stable-1",
+        },
+    )
+    # A "retry" with the SAME request_id re-streams (fresh reply) but the
+    # server dedups persistence — no second user+assistant pair, no fork.
+    await _drain(
+        client,
+        {
+            "persona_id": "aria",
+            "convo_id": "c-i8",
+            "message": "remember this turn",
+            "request_id": "req-stable-1",
+        },
+    )
 
     r = await client.get("/v1/memory", params={"persona_id": "aria", "convo_id": "c-i8"})
     rows = r.json()
@@ -235,19 +243,14 @@ async def test_i08_retry_with_same_request_id_does_not_duplicate(client) -> None
 
 async def test_i08_distinct_request_ids_both_persist(client) -> None:
     """Control: two turns with DIFFERENT request_ids both persist (no false dedup)."""
-    real_env_key = prov._env_key
-    _force_mock()
-    try:
-        await _drain(
-            client,
-            {"persona_id": "aria", "convo_id": "c-i8b", "message": "first", "request_id": "r1"},
-        )
-        await _drain(
-            client,
-            {"persona_id": "aria", "convo_id": "c-i8b", "message": "second", "request_id": "r2"},
-        )
-    finally:
-        prov._env_key = real_env_key
+    await _drain(
+        client,
+        {"persona_id": "aria", "convo_id": "c-i8b", "message": "first", "request_id": "r1"},
+    )
+    await _drain(
+        client,
+        {"persona_id": "aria", "convo_id": "c-i8b", "message": "second", "request_id": "r2"},
+    )
 
     r = await client.get("/v1/memory", params={"persona_id": "aria", "convo_id": "c-i8b"})
     rows = r.json()

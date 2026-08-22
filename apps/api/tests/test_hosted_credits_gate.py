@@ -46,7 +46,7 @@ async def _read_events(client, body: dict) -> list[dict]:
     return events
 
 
-async def test_out_of_credits_gates_real_provider(make_app, app_client):
+async def test_out_of_credits_returns_402(make_app, app_client):
     app = make_app(
         DEPLOYMENT_MODE="hosted",
         AUTH_BACKEND="magic_link",
@@ -75,21 +75,16 @@ async def test_out_of_credits_gates_real_provider(make_app, app_client):
         assert me.json()["credits_usd"] == 0
         assert me.json()["plan"] == "hosted_free"
 
-        events = await _read_events(
-            ac,
-            {"persona_id": "lou", "convo_id": "c1", "message": "hi", "memory_on": False},
+        # Out of credits should return HTTP 402 (Payment Required)
+        resp = await ac.post(
+            "/v1/llm/stream",
+            json={"persona_id": "lou", "convo_id": "c1", "message": "hi", "memory_on": False},
         )
-        types = [e["type"] for e in events]
-        assert types[0] == "session"
-        assert types[-1] == "done"
-        # The gate fires: a fallback event with reason "out of credits".
-        fallbacks = [e for e in events if e["type"] == "fallback"]
-        assert any(f["reason"] == "out of credits" for f in fallbacks), events
-        # The turn was served by mock (the real provider was skipped).
-        usage = next(e for e in events if e["type"] == "usage")
-        assert usage["provider_kind"] == "mock"
-        # And a real reply still came back.
-        assert "".join(e["text"] for e in events if e["type"] == "token").strip()
+        assert resp.status_code == 402
+        body = resp.json()
+        assert "credits" in body["detail"].lower() or "out of" in body["detail"].lower()
+        # No key material leaks in error response.
+        assert "sk-" not in json.dumps(body)
 
 
 async def test_self_hosted_ignores_credits(make_app, app_client):

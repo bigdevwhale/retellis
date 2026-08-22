@@ -16,7 +16,7 @@ from __future__ import annotations
 import json
 from collections.abc import AsyncIterator
 
-from ai_companion_api.llm import MockAdapter, RoutingCandidate
+from ai_companion_api.llm import RoutingCandidate
 from ai_companion_api.llm.types import LlmAdapter, LlmUsage
 from ai_companion_api.routers import llm as llm_router
 from ai_companion_api.safety import screen_assistant_text, screen_user_message
@@ -102,15 +102,13 @@ async def test_inbound_crisis_short_circuits_before_provider(client, monkeypatch
     )
     assert called["build_chain"] == 0
     types = _types(events)
-    # session → token → usage → done, no fallback, no error.
+    # session → token → done, no fallback, no error (crisis path bypasses provider)
     assert types[0] == "session"
     assert types[-1] == "done"
     assert "fallback" not in types
     assert "error" not in types
     tokens = "".join(e["text"] for e in events if e["type"] == "token")
     assert "988" in tokens
-    usage = next(e for e in events if e["type"] == "usage")
-    assert usage["provider_kind"] == "mock"
 
 
 async def test_inbound_crisis_ru_gets_russian_resource(client, monkeypatch) -> None:
@@ -156,14 +154,6 @@ async def test_outbound_screen_appends_resource(client, monkeypatch) -> None:
                 base_url=None,
                 adapter=_CrisisReplyAdapter(),
                 is_mock=False,
-                decrypted=None,
-            ),
-            RoutingCandidate(
-                kind="mock",
-                model="mock",
-                base_url=None,
-                adapter=MockAdapter(),
-                is_mock=True,
                 decrypted=None,
             ),
         ]

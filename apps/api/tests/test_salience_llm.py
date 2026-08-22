@@ -28,10 +28,6 @@ class _FakeAdapter:
         return self._reply or ""
 
 
-class _MockAdapter:
-    provider_kind = "mock"
-
-
 @pytest.mark.asyncio
 async def test_judge_parses_clean_json() -> None:
     a = _FakeAdapter(
@@ -113,12 +109,6 @@ async def test_judge_returns_none_on_empty_reply() -> None:
 async def test_judge_returns_none_on_call_error() -> None:
     a = _FakeAdapter(raises=True)
     assert await judge_salience(a, "gpt-4o-mini", "msg") is None
-
-
-@pytest.mark.asyncio
-async def test_judge_skips_mock_adapter() -> None:
-    # No `complete` attr + provider_kind == "mock" → None, never calls the model.
-    assert await judge_salience(_MockAdapter(), "mock", "anything") is None
 
 
 @pytest.mark.asyncio

@@ -47,10 +47,6 @@ class _FakeAdapter:
         return self._reply
 
 
-class _MockAdapter:
-    provider_kind = "mock"
-
-
 async def _seed(store: InMemoryStore, n: int) -> list[str]:
     ids: list[str] = []
     for i in range(n):
@@ -117,16 +113,6 @@ async def test_covered_batch_makes_second_run_noop() -> None:
     )
     assert second is None  # everything old is covered now
     assert a.calls == 1
-
-
-@pytest.mark.asyncio
-async def test_mock_adapter_is_noop() -> None:
-    store = InMemoryStore()
-    await _seed(store, RECENT_KEEP + CONSOLIDATE_MIN_UNCOVERED + 5)
-    out = await maybe_consolidate(
-        _MockAdapter(), "mock", store, user_id=USER, persona_id=PERSONA, convo_id=CONVO
-    )
-    assert out is None
 
 
 @pytest.mark.asyncio
@@ -244,16 +230,6 @@ async def test_era_second_run_is_noop_until_new_episodes_accumulate() -> None:
     )
     assert second is None  # constituents superseded — below threshold again
     assert a.calls == 1
-
-
-@pytest.mark.asyncio
-async def test_era_mock_adapter_is_noop() -> None:
-    store = InMemoryStore()
-    await _seed_episodes(store, ERA_MIN_EPISODES + 1)
-    out = await maybe_consolidate_eras(
-        _MockAdapter(), "mock", store, user_id=USER, persona_id=PERSONA
-    )
-    assert out is None
 
 
 @pytest.mark.asyncio

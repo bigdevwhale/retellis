@@ -1,9 +1,9 @@
 """Phase 4 — routing chain, budget thresholds, fallback runner, /v1/routing.
 
 Covers: ``compute_budget`` thresholds; ``build_chain`` ordering (BYOK → env →
-Ollama → mock, BYOK skips its own env kind); ``run_with_fallback`` falling over
-a failing provider to mock; budget hard-stop skipping real providers via the
-stream; ``GET /v1/routing`` returning the chain + per-provider summary + budget.
+Ollama, BYOK skips its own env kind); ``run_with_fallback`` falling over
+a failing provider; budget hard-stop returning HTTP 402; ``GET /v1/routing``
+returning the chain + per-provider summary + budget.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from ai_companion_contracts import Usage
 from nacl.public import SealedBox
 
 from ai_companion_api.config import Settings
-from ai_companion_api.llm import LlmCallError, MockAdapter, RoutingCandidate, build_chain
+from ai_companion_api.llm import LlmCallError, NoProviderAvailableError, RoutingCandidate, build_chain
 from ai_companion_api.llm.types import LlmAdapter, LlmUsage
 from ai_companion_api.memory.store import UsageRecord
 from ai_companion_api.routing import (
@@ -67,14 +67,13 @@ def _settings(**overrides) -> Settings:
     return Settings(**base)
 
 
-def test_build_chain_no_keys_is_just_mock() -> None:
+def test_build_chain_no_keys_is_empty() -> None:
     ecdh = generate_session_keypair()
     cands = build_chain(enc_key_blob=None, settings=_settings(), ecdh=ecdh)
-    assert len(cands) == 1
-    assert cands[0].kind == "mock" and cands[0].is_mock
+    assert len(cands) == 0  # No providers configured - empty chain
 
 
-def test_build_chain_env_then_mock() -> None:
+def test_build_chain_env_only() -> None:
     ecdh = generate_session_keypair()
     cands = build_chain(
         enc_key_blob=None,
@@ -82,11 +81,11 @@ def test_build_chain_env_then_mock() -> None:
         ecdh=ecdh,
     )
     kinds = [c.kind for c in cands]
-    assert kinds == ["openai", "mock"]
+    assert kinds == ["openai"]
     assert all(c.decrypted is None for c in cands)
 
 
-def test_build_chain_ollama_inserted_before_mock_when_configured() -> None:
+def test_build_chain_ollama_inserted_when_configured() -> None:
     ecdh = generate_session_keypair()
     cands = build_chain(
         enc_key_blob=None,
@@ -96,7 +95,7 @@ def test_build_chain_ollama_inserted_before_mock_when_configured() -> None:
         ecdh=ecdh,
     )
     kinds = [c.kind for c in cands]
-    assert kinds == ["openai", "ollama", "mock"]
+    assert kinds == ["openai", "ollama"]
     assert cands[1].base_url == "http://ollama:11434"
 
 
@@ -114,15 +113,14 @@ def test_build_chain_byok_first_and_skips_same_env_kind() -> None:
         settings=_settings(litellm_api_key_openai="k-env-openai"),
         ecdh=ecdh,
     )
-    # BYOK openai first; the env openai entry is dropped (same kind); mock last.
+    # BYOK openai first; the env openai entry is dropped (same kind).
     kinds = [c.kind for c in cands]
     assert kinds[0] == "openai"
     assert kinds.count("openai") == 1
-    assert kinds[-1] == "mock"
-    # The BYOK candidate carries the decrypted key; env/mock do not.
+    assert len(kinds) == 1  # No mock anymore
+    # The BYOK candidate carries the decrypted key.
     assert cands[0].decrypted is not None
     assert cands[0].decrypted.api_key.decode() == "sk-byok"
-    assert all(c.decrypted is None for c in cands[1:])
 
 
 def test_build_chain_byok_ollama_cloud_uses_openai_compat_endpoint() -> None:
@@ -183,12 +181,25 @@ class _FailingAdapter(LlmAdapter):
         return LlmUsage("openai", "gpt-4o-mini", 0, 0, 0.0)
 
 
+class _OkAdapter(LlmAdapter):
+    """Simple working adapter for fallback tests."""
+
+    provider_kind = "ollama"
+
+    async def stream(self, messages, model) -> AsyncIterator[str]:  # noqa: ANN001
+        yield "fallback reply"
+        yield ""  # pragma: no cover  # make it an async generator
+
+    def last_usage(self) -> LlmUsage:
+        return LlmUsage("ollama", "llama3.3", 2, 1, 0.0)
+
+
 @pytest.mark.asyncio
-async def test_run_with_fallback_falls_over_to_mock() -> None:
+async def test_run_with_fallback_falls_over_to_next_provider() -> None:
     clear_fallback("u")
     cands = [
         RoutingCandidate("openai", "gpt-4o-mini", None, _FailingAdapter(), False, None),
-        RoutingCandidate("mock", "mock", None, MockAdapter(), True, None),
+        RoutingCandidate("ollama", "llama3.3", None, _OkAdapter(), False, None),
     ]
     tags: list[tuple[str, object]] = []
     async for tag, val in run_with_fallback(
@@ -198,7 +209,7 @@ async def test_run_with_fallback_falls_over_to_mock() -> None:
     kinds = [t[0] for t in tags]
     assert "fallback" in kinds
     fb = next(v for t, v in tags if t == "fallback")
-    assert fb[0] == "openai" and fb[1] == "mock"
+    assert fb[0] == "openai" and fb[1] == "ollama"
     assert kinds[-1] == "served"
     assert last_fallback("u") and "openai" in last_fallback("u")
 
@@ -228,36 +239,33 @@ def test_routing_state_summary_and_budget() -> None:
     records = [
         _rec("u", "openai", 4.0, 100, 50),
         _rec("u", "openai", 2.0, 20, 10),
-        _rec("u", "mock", 0.0, 5, 8),
     ]
     state = routing_state(
-        settings=settings, records=records, fallback_last_turn="openai → mock (x)"
+        settings=settings, records=records, fallback_last_turn="openai → ollama (x)"
     )
-    # Chain: configured openai + ollama(standby) + mock.
+    # Chain: configured openai only (ollama not configured).
     chain_kinds = [n.kind for n in state.chain]
-    assert chain_kinds == ["openai", "ollama", "mock"]
-    assert state.chain[-1].status == "healthy"
+    assert chain_kinds == ["openai"]
+    assert state.chain[0].status == "healthy"
     # Budget: spent 6 / 10 → 60% → no warn, no hard-stop.
     assert abs(state.spent_usd - 6.0) < 1e-9
     assert abs(state.remaining_usd - 4.0) < 1e-9
     assert not state.warn and not state.hard_stop
-    assert state.fallback_last_turn == "openai → mock (x)"
-    # Per-provider rollup: openai aggregated, mock separate.
+    assert state.fallback_last_turn == "openai → ollama (x)"
+    # Per-provider rollup: openai aggregated.
     by_kind = {p.kind: p for p in state.per_provider}
     assert by_kind["openai"].requests == 2
     assert abs(by_kind["openai"].cost_usd - 6.0) < 1e-9
     assert by_kind["openai"].tokens_in == 120
     assert by_kind["openai"].tokens_out == 60
-    assert by_kind["mock"].requests == 1
     # Langfuse link-out is the browser URL.
     assert state.langfuse_url == settings.langfuse_public_url
 
 
-def test_display_chain_zero_config_is_ollama_standby_then_mock() -> None:
+def test_display_chain_zero_config_is_empty() -> None:
     chain = display_chain(_settings())
-    assert [n.kind for n in chain] == ["ollama", "mock"]
-    assert chain[0].status == "standby"
-    assert chain[1].status == "healthy"
+    # No providers configured - empty chain
+    assert [n.kind for n in chain] == []
 
 
 # --- /v1/routing endpoint + budget hard-stop via the stream -----------------
@@ -284,20 +292,21 @@ async def test_get_routing_returns_state_with_summary(client) -> None:
         )
     finally:
         prov._env_key = real
-    assert any(e["type"] == "usage" for e in events)
+    # With no providers, should error - NoProviderAvailableError
+    assert any(e["type"] == "error" for e in events)
 
     r = await client.get("/v1/routing")
     assert r.status_code == 200
     state = r.json()
+    # No providers configured - empty chain
     chain_kinds = [n["kind"] for n in state["chain"]]
-    assert chain_kinds[-1] == "mock"
+    assert chain_kinds == []
     assert "pct" in state and "per_provider" in state
-    by_kind = {p["kind"]: p for p in state["per_provider"]}
-    assert by_kind["mock"]["requests"] >= 1
     assert "sk-" not in json.dumps(state)
 
 
-async def test_budget_hard_stop_skips_to_mock(client) -> None:
+async def test_budget_hard_stop_raises_402_error(client) -> None:
+    """Budget hard-stop raises HTTP 402, but inside SSE stream this becomes ExceptionGroup."""
     import ai_companion_api.llm.provider as prov
 
     app = client._transport.app  # type: ignore[attr-defined]
@@ -323,23 +332,21 @@ async def test_budget_hard_stop_skips_to_mock(client) -> None:
     # event before the budget gate ever runs.
     prov._env_key = lambda settings, kind: "k" if kind == "openai" else None  # noqa: E731
     try:
-        events = await _read_events(
-            client, {"persona_id": "sam", "convo_id": "c9", "message": "rough day"}
+        # The budget hard-stop raises HTTPException before the SSE stream starts
+        # so we expect an error response, not a stream
+        resp = await client.post(
+            "/v1/llm/stream",
+            json={"persona_id": "sam", "convo_id": "c9", "message": "rough day"},
         )
+        # Should return 402 Payment Required
+        assert resp.status_code == 402, f"Expected 402, got {resp.status_code}"
+        body = resp.json()
+        # Check that the error message mentions budget
+        detail_str = json.dumps(body).lower()
+        assert "budget" in detail_str, f"Expected 'budget' in error: {body}"
     finally:
         prov._env_key = real
         app.state.settings.monthly_budget_usd = 20.0
 
-    types = [e["type"] for e in events]
-    # A fallback event with reason mentioning the budget hard-stop must fire,
-    # and the turn is still served by mock (tokens + usage arrive).
-    assert "fallback" in types
-    fb = next(e for e in events if e["type"] == "fallback")
-    assert "budget hard-stop" in fb["reason"]
-    assert fb["to_kind"] == "mock"
-    assert any(e["type"] == "token" for e in events)
-    usage = next(e for e in events if e["type"] == "usage")
-    assert usage["provider_kind"] == "mock"
-    assert types[-1] == "done"
-    # No key material leaks.
-    assert "sk-" not in json.dumps(events)
+    # No key material leaks in error response.
+    assert "sk-" not in json.dumps(body)

@@ -1,11 +1,11 @@
-"""``POST /v1/llm/stream`` — SSE shape, mock adapter, fallback event, bad blob."""
+"""``POST /v1/llm/stream`` — SSE shape, fallback event, bad blob."""
 
 from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
 
-from ai_companion_api.llm import LlmCallError, MockAdapter, RoutingCandidate
+from ai_companion_api.llm import LlmCallError, RoutingCandidate
 from ai_companion_api.llm.types import LlmAdapter, LlmUsage
 from ai_companion_api.routers import llm as llm_router
 
@@ -25,9 +25,8 @@ def _types(events: list[dict]) -> list[str]:
     return [e["type"] for e in events]
 
 
-async def test_mock_stream_shape(client) -> None:
-    # Force the env-fallback path off so we exercise the mock adapter regardless
-    # of any LITELLM_API_KEY_* present in the dev shell.
+async def test_stream_shape_with_no_providers_returns_error(client) -> None:
+    # Force the env-fallback path off so we test the no-provider error path.
     import ai_companion_api.llm.provider as prov
 
     real_env_key = prov._env_key
@@ -46,16 +45,12 @@ async def test_mock_stream_shape(client) -> None:
 
     types = _types(events)
     assert types[0] == "session"
+    assert "error" in types
+    err = next(e for e in events if e["type"] == "error")
+    assert "provider" in err["message"].lower() or "configured" in err["message"].lower()
     assert types[-1] == "done"
-    # session → token×N → usage → done (no fallback on the happy mock path)
-    assert "fallback" not in types
-    usage_idx = types.index("usage")
-    assert usage_idx == len(types) - 2
-    tokens = [e["text"] for e in events if e["type"] == "token"]
-    assert "".join(tokens).strip()  # non-empty reply
-    usage = events[usage_idx]
-    assert usage["provider_kind"] == "mock"
-    assert usage["completion_tokens"] > 0
+    # No key material leaks.
+    assert "sk-" not in json.dumps(events)
 
 
 class _FailingAdapter(LlmAdapter):
@@ -71,7 +66,20 @@ class _FailingAdapter(LlmAdapter):
         return LlmUsage("openai", "gpt-4o-mini", 0, 0, 0.0)
 
 
-async def test_fallback_to_mock_on_provider_failure(client, monkeypatch) -> None:
+class _FallbackAdapter(LlmAdapter):
+    """Simple working adapter for fallback tests."""
+
+    provider_kind = "ollama"
+
+    async def stream(self, messages, model) -> AsyncIterator[str]:  # noqa: ANN001
+        yield "fallback reply"
+        yield ""  # pragma: no cover  # make it an async generator
+
+    def last_usage(self) -> LlmUsage:
+        return LlmUsage("ollama", "llama3.3", 2, 1, 0.0)
+
+
+async def test_fallback_to_next_provider_on_provider_failure(client, monkeypatch) -> None:
     def fake_build_chain(*, enc_key_blob, settings, ecdh, model=None, byok_decrypted=None):  # noqa: ANN001, ARG001
         return [
             RoutingCandidate(
@@ -83,11 +91,11 @@ async def test_fallback_to_mock_on_provider_failure(client, monkeypatch) -> None
                 decrypted=None,
             ),
             RoutingCandidate(
-                kind="mock",
-                model="mock",
+                kind="ollama",
+                model="llama3.3",
                 base_url=None,
-                adapter=MockAdapter(),
-                is_mock=True,
+                adapter=_FallbackAdapter(),
+                is_mock=False,
                 decrypted=None,
             ),
         ]
@@ -101,11 +109,11 @@ async def test_fallback_to_mock_on_provider_failure(client, monkeypatch) -> None
     assert "fallback" in types
     fb = next(e for e in events if e["type"] == "fallback")
     assert fb["from_kind"] == "openai"
-    assert fb["to_kind"] == "mock"
-    # Mock tokens still arrive after the fallback.
+    assert fb["to_kind"] == "ollama"
+    # Fallback tokens still arrive after the fallback.
     assert [e for e in events if e["type"] == "token"]
     usage = next(e for e in events if e["type"] == "usage")
-    assert usage["provider_kind"] == "mock"
+    assert usage["provider_kind"] == "ollama"
     assert types[-1] == "done"
 
 

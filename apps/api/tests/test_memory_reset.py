@@ -26,18 +26,49 @@ async def _stream_mock(client, body: dict) -> None:
             pass
 
 
-def _force_mock():
-    """Force the mock adapter so a stream turn persists events without a key."""
+def _inject_fake_adapter():
+    """Inject a fake adapter for testing without requiring real API keys."""
+    from ai_companion_api.llm import RoutingCandidate
+    from ai_companion_api.llm.types import LlmAdapter, LlmUsage
+    from ai_companion_api.routers import llm as llm_router
+
+    class _FakeAdapter(LlmAdapter):
+        provider_kind = "test"
+
+        async def stream(self, messages, model):
+            yield "test reply"
+            yield ""  # pragma: no cover
+
+        def last_usage(self):
+            return LlmUsage("test", "test-model", 2, 1, 0.0)
+
     real = prov._env_key
     prov._env_key = lambda settings, kind: None  # noqa: E731
-    return real
+
+    # Also inject a fake build_chain that returns our fake adapter
+    original_build_chain = llm_router.build_chain
+
+    def fake_build_chain(*, enc_key_blob, settings, ecdh, model=None, byok_decrypted=None):
+        return [RoutingCandidate(
+            kind="test",
+            model="test-model",
+            base_url=None,
+            adapter=_FakeAdapter(),
+            is_mock=False,
+            decrypted=None,
+        )]
+
+    llm_router.build_chain = fake_build_chain
+    return real, original_build_chain
 
 
 # --- Feature B: per-conversation server delete -------------------------------
 
 
 async def test_delete_convo_removes_only_that_threads_events(client) -> None:
-    real = _force_mock()
+    from ai_companion_api.routers import llm as llm_router
+
+    real_env_key, original_build_chain = _inject_fake_adapter()
     try:
         await _stream_mock(
             client, {"persona_id": "aria", "convo_id": "c1", "message": "My dog Maple died."}
@@ -46,7 +77,8 @@ async def test_delete_convo_removes_only_that_threads_events(client) -> None:
             client, {"persona_id": "aria", "convo_id": "c2", "message": "I got a job at Acme."}
         )
     finally:
-        prov._env_key = real
+        prov._env_key = real_env_key
+        llm_router.build_chain = original_build_chain
 
     # Both threads present (2 events each: user + assistant).
     events = (await client.get("/v1/memory", params={"persona_id": "aria"})).json()
@@ -63,13 +95,16 @@ async def test_delete_convo_removes_only_that_threads_events(client) -> None:
 
 
 async def test_delete_convo_then_recall_forgets_that_thread(client) -> None:
-    real = _force_mock()
+    from ai_companion_api.routers import llm as llm_router
+
+    real_env_key, original_build_chain = _inject_fake_adapter()
     try:
         await _stream_mock(
             client, {"persona_id": "aria", "convo_id": "c1", "message": "My dog Maple died."}
         )
     finally:
-        prov._env_key = real
+        prov._env_key = real_env_key
+        llm_router.build_chain = original_build_chain
 
     # Before delete, recall surfaces Maple.
     before = (
@@ -98,13 +133,16 @@ async def test_delete_convo_then_recall_forgets_that_thread(client) -> None:
 
 
 async def _seed_aria_with_shares(client) -> None:
-    real = _force_mock()
+    from ai_companion_api.routers import llm as llm_router
+
+    real_env_key, original_build_chain = _inject_fake_adapter()
     try:
         await _stream_mock(
             client, {"persona_id": "aria", "convo_id": "c1", "message": "My dog Maple died."}
         )
     finally:
-        prov._env_key = real
+        prov._env_key = real_env_key
+        llm_router.build_chain = original_build_chain
     # Outgoing: aria shares INTO sam.
     r = await client.post(
         "/v1/memory/shares",

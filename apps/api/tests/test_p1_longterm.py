@@ -176,26 +176,6 @@ async def test_relationship_note_created_and_superseded() -> None:
     assert [m.id for m in notes] == [note2.id]
 
 
-async def test_relationship_note_mock_and_empty_noop() -> None:
-    store = InMemoryStore()
-
-    class MockAdapter:
-        provider_kind = "mock"
-
-    assert (
-        await maybe_update_relationship_note(
-            MockAdapter(), "mock", store, user_id="u", persona_id="p"
-        )
-        is None
-    )
-    # No memories at all → nothing to build from.
-    adapter = FakeAdapter('{"note": "x"}')
-    assert (
-        await maybe_update_relationship_note(adapter, "m", store, user_id="u", persona_id="p")
-        is None
-    )
-
-
 def test_relationship_message_picks_newest_note() -> None:
     old = _mem(1, "old note", [NOTE_TAG], age_days=30)
     new = _mem(2, "new note", [NOTE_TAG], age_days=1)
