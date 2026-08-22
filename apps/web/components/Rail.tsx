@@ -151,10 +151,9 @@ export function Rail() {
   const billing = !!config?.features.billing;
 
   const items = useMemo(() => {
-    // Authed users don't see Home — they redirect server-side to /chat
-    const base = authed
-      ? NAV.filter((it) => it.screen !== 'home')
-      : NAV.filter((it) => it.screen === 'home' || it.screen === 'plans');
+    // Rail is never shown to guests (AppShell renders TopBar landing-shell for them).
+    // Remove Home entirely — authed users redirect server-side to /chat anyway.
+    const base = NAV.filter((it) => it.screen !== 'home');
     return base
       .filter((it) => it.screen !== 'plans' || billing)
       .map((it) => {
@@ -163,7 +162,7 @@ export function Rail() {
         const openByActive = Boolean(active && it.sub);
         return { ...it, active, open: open[it.screen] ?? openByActive };
       });
-  }, [pathname, open, authed, billing]);
+  }, [pathname, open, billing]);
 
   const toggleGroup = (screen: string) =>
     setOpen((p) => ({ ...p, [screen]: !(p[screen] ?? false) }));
